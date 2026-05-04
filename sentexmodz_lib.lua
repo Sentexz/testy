@@ -1,5 +1,5 @@
 -- ============================================================
--- SENTEXMODZ LIBRARY v3.0 - COMPLETA Y FUNCIONAL
+-- SENTEXMODZ LIBRARY v3.1 - CORREGIDA (ApplyTheme existe)
 -- Diseño verde lima, banner personalizado, todas las acciones
 -- ============================================================
 
@@ -24,7 +24,6 @@ Menu.LoadingProgress = 0
 Menu.LoadingStartTime = nil
 Menu.LoadingDuration = 3000
 Menu.CurrentTopTab = 1
-Menu.KeySelectorAnim = 0
 
 -- Colores (verde lima)
 Menu.Colors = {
@@ -79,7 +78,9 @@ Menu.KeyNames = {
 
 function Menu.GetKeyName(code) return Menu.KeyNames[code] or ("0x"..string.format("%02X", code)) end
 
--- Funciones de dibujo (usando Susano)
+-- ============================================
+-- FUNCIONES DE DIBUJO (usando Susano)
+-- ============================================
 function Menu.DrawRect(x,y,w,h,r,g,b,a)
     if Susano and Susano.DrawFilledRect then
         Susano.DrawFilledRect(x,y,w,h,r/255,g/255,b/255,a/255)
@@ -87,6 +88,7 @@ function Menu.DrawRect(x,y,w,h,r,g,b,a)
         DrawRect(x,y,w,h,r,g,b,a)
     end
 end
+
 function Menu.DrawText(x,y,text,size,r,g,b,a,center)
     if Susano and Susano.DrawText then
         Susano.DrawText(x,y,text,size,r/255,g/255,b/255,a/255)
@@ -100,6 +102,7 @@ function Menu.DrawText(x,y,text,size,r,g,b,a,center)
         DrawText(x,y)
     end
 end
+
 function Menu.DrawRoundedRect(x,y,w,h,r,g,b,a,radius)
     if Susano and Susano.DrawRectFilled then
         Susano.DrawRectFilled(x,y,w,h,r/255,g/255,b/255,a/255,radius)
@@ -108,7 +111,9 @@ function Menu.DrawRoundedRect(x,y,w,h,r,g,b,a,radius)
     end
 end
 
--- Cargar banner
+-- ============================================
+-- CARGAR BANNER
+-- ============================================
 function Menu.LoadBannerTexture(url)
     if not url or not Susano or not Susano.HttpGet or not Susano.LoadTextureFromBuffer then return end
     CreateThread(function()
@@ -120,7 +125,21 @@ function Menu.LoadBannerTexture(url)
     end)
 end
 
--- Funciones de acción REALES
+-- ============================================
+-- APLICAR TEMA (debe existir antes de usarse)
+-- ============================================
+function Menu.ApplyTheme(themeName)
+    Menu.CurrentTheme = "Lime"
+    Menu.Colors.HeaderPink = { r = 50, g = 205, b = 50 }
+    Menu.Colors.SelectedBg = { r = 50, g = 205, b = 50 }
+    if Menu.Banner.enabled and Menu.Banner.imageUrl then
+        Menu.LoadBannerTexture(Menu.Banner.imageUrl)
+    end
+end
+
+-- ============================================
+-- FUNCIONES DE ACCIÓN REALES
+-- ============================================
 local function ToggleGodmode()
     Menu.godmodeActive = not Menu.godmodeActive
     local ped = PlayerPedId()
@@ -209,7 +228,9 @@ local function ChangeWeather()
     end
 end
 
--- Estructura del menú (con acciones reales)
+-- ============================================
+-- ESTRUCTURA DEL MENÚ
+-- ============================================
 Menu.TopLevelTabs = { { name = "SENTEXMODZ", categories = {}, autoOpen = true } }
 Menu.Categories = {
     { name = "MAIN" },
@@ -240,6 +261,9 @@ Menu.Categories = {
     } }
 }
 
+-- ============================================
+-- FUNCIONES DE DIBUJO DEL MENÚ
+-- ============================================
 function Menu.GetScaledPosition()
     local s = Menu.Scale
     return {
@@ -269,7 +293,6 @@ function Menu.DrawCategories()
         local sp = Menu.GetScaledPosition()
         local x, startY = sp.x, sp.y + sp.headerHeight
         local w, tabH = sp.width, sp.mainMenuHeight
-        -- Dibujar pestañas
         local tabs = cat.tabs
         local tabW = w / #tabs
         for i, tab in ipairs(tabs) do
@@ -278,7 +301,6 @@ function Menu.DrawCategories()
             Menu.DrawRect(tx, startY, tabW, tabH, isSel and Menu.Colors.SelectedBg.r or 20, isSel and Menu.Colors.SelectedBg.g or 20, isSel and Menu.Colors.SelectedBg.b or 20, isSel and 255 or 100)
             Menu.DrawText(tx+tabW/2, startY+tabH/2-8, tab.name, 16, 255,255,255,255, true)
         end
-        -- Items de la pestaña actual
         local currentTab = tabs[Menu.CurrentTab]
         if currentTab and currentTab.items then
             local itemY = startY + tabH + sp.mainMenuSpacing
@@ -365,7 +387,9 @@ function Menu.Render()
     Susano.SubmitFrame()
 end
 
--- Manejo de teclas y noclip
+-- ============================================
+-- MANEJO DE TECLAS Y NOCLIP
+-- ============================================
 Menu.KeyStates = {}
 function Menu.IsKeyJustPressed(key)
     if not Susano or not Susano.GetAsyncKeyState then return false end
@@ -465,7 +489,9 @@ function Menu.HandleInput()
     end
 end
 
--- Bucle de noclip (movimiento)
+-- ============================================
+-- BUCLE DE NOCLIP (movimiento)
+-- ============================================
 CreateThread(function()
     while true do
         Wait(0)
@@ -513,8 +539,11 @@ CreateThread(function()
     end
 end)
 
--- Inicialización
+-- ============================================
+-- INICIALIZACIÓN (con ApplyTheme ya definido)
+-- ============================================
 CreateThread(function()
+    Menu.ApplyTheme("Lime")   -- <--- Ahora sí existe
     Menu.LoadingStartTime = GetGameTimer() or 0
     while Menu.IsLoading do
         local elapsed = (GetGameTimer() or 0) - Menu.LoadingStartTime
@@ -530,7 +559,6 @@ CreateThread(function()
 end)
 
 CreateThread(function()
-    Menu.ApplyTheme("Lime")
     while true do
         Menu.Render()
         if Menu.LoadingComplete then Menu.HandleInput() end
