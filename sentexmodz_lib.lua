@@ -1,5 +1,7 @@
 -- ============================================================
--- SENTEXMODZ LIBRARY v3.2 - Selector de tecla estilo menú
+-- SENTEXMODZ LIBRARY v4.0 - MEJORADA
+-- Selector de tecla con diseño premium + 3 teclas rápidas
+-- Fondo de menú negro sólido | Noclip sigiloso
 -- ============================================================
 
 local Menu = {}
@@ -41,18 +43,19 @@ Menu.Banner = {
 }
 Menu.bannerTexture = nil
 
--- Variables de estado para funciones
+-- Variables de estado
 Menu.godmodeActive = false
 Menu.noclipActive = false
 Menu.noclipSpeed = 5.0
+Menu.noclipStealth = true  -- nuevo: modo sigiloso
 
--- Posición y tamaño
+-- Posición y tamaño (se adapta a la pantalla)
 Menu.Position = { x = 50, y = 100, width = 360, itemHeight = 34, mainMenuHeight = 26,
     headerHeight = 100, footerHeight = 26, footerSpacing = 5, mainMenuSpacing = 5,
     footerRadius = 4, itemRadius = 4, scrollbarWidth = 12, scrollbarPadding = 3, headerRadius = 6 }
 Menu.Scale = 1.0
 
--- Mapeo de teclas a nombres legibles
+-- Mapeo de teclas a nombres legibles (ampliado)
 Menu.KeyNames = {
     [0x08] = "Backspace", [0x09] = "Tab", [0x0D] = "Enter", [0x10] = "Shift",
     [0x11] = "Ctrl", [0x12] = "Alt", [0x1B] = "ESC", [0x20] = "Space",
@@ -69,17 +72,15 @@ Menu.KeyNames = {
     [0x5A] = "Z", [0x60] = "Numpad 0", [0x61] = "Numpad 1", [0x62] = "Numpad 2",
     [0x63] = "Numpad 3", [0x64] = "Numpad 4", [0x65] = "Numpad 5", [0x66] = "Numpad 6",
     [0x67] = "Numpad 7", [0x68] = "Numpad 8", [0x69] = "Numpad 9",
-    [0x70] = "F1", [0x71] = "F2", [0x72] = "F3", [0x73] = "F4",
+    [0x6A] = "Multiply", [0x6B] = "Add", [0x6D] = "Subtract", [0x6E] = "Decimal",
+    [0x6F] = "Divide", [0x70] = "F1", [0x71] = "F2", [0x72] = "F3", [0x73] = "F4",
     [0x74] = "F5", [0x75] = "F6", [0x76] = "F7", [0x77] = "F8",
     [0x78] = "F9", [0x79] = "F10", [0x7A] = "F11", [0x7B] = "F12",
-    [0xA0] = "Left Shift", [0xA1] = "Right Shift"
+    [0xA0] = "Left Shift", [0xA1] = "Right Shift", [0x90] = "Num Lock", [0x91] = "Scroll Lock"
 }
-
 function Menu.GetKeyName(code) return Menu.KeyNames[code] or ("0x"..string.format("%02X", code)) end
 
--- ============================================
--- FUNCIONES DE DIBUJO
--- ============================================
+-- Funciones de dibujo
 function Menu.DrawRect(x,y,w,h,r,g,b,a)
     if Susano and Susano.DrawFilledRect then
         Susano.DrawFilledRect(x,y,w,h,r/255,g/255,b/255,a/255)
@@ -87,7 +88,6 @@ function Menu.DrawRect(x,y,w,h,r,g,b,a)
         DrawRect(x,y,w,h,r,g,b,a)
     end
 end
-
 function Menu.DrawText(x,y,text,size,r,g,b,a,center)
     if Susano and Susano.DrawText then
         Susano.DrawText(x,y,text,size,r/255,g/255,b/255,a/255)
@@ -101,7 +101,6 @@ function Menu.DrawText(x,y,text,size,r,g,b,a,center)
         DrawText(x,y)
     end
 end
-
 function Menu.DrawRoundedRect(x,y,w,h,r,g,b,a,radius)
     if Susano and Susano.DrawRectFilled then
         Susano.DrawRectFilled(x,y,w,h,r/255,g/255,b/255,a/255,radius)
@@ -110,9 +109,7 @@ function Menu.DrawRoundedRect(x,y,w,h,r,g,b,a,radius)
     end
 end
 
--- ============================================
--- CARGAR BANNER
--- ============================================
+-- Cargar banner
 function Menu.LoadBannerTexture(url)
     if not url or not Susano or not Susano.HttpGet or not Susano.LoadTextureFromBuffer then return end
     CreateThread(function()
@@ -124,9 +121,6 @@ function Menu.LoadBannerTexture(url)
     end)
 end
 
--- ============================================
--- APLICAR TEMA
--- ============================================
 function Menu.ApplyTheme(themeName)
     Menu.CurrentTheme = "Lime"
     Menu.Colors.HeaderPink = { r = 50, g = 205, b = 50 }
@@ -136,9 +130,9 @@ function Menu.ApplyTheme(themeName)
     end
 end
 
--- ============================================
--- FUNCIONES DE ACCIÓN REALES
--- ============================================
+-- ============================================================
+-- ACCIONES REALES (Godmode, Heal, etc.)
+-- ============================================================
 local function ToggleGodmode()
     Menu.godmodeActive = not Menu.godmodeActive
     local ped = PlayerPedId()
@@ -165,7 +159,7 @@ local function ToggleNoclip()
     if Menu.noclipActive then
         SetEntityVisible(ped, false, false)
         if Susano and Susano.ShowNotification then
-            Susano.ShowNotification("~g~Noclip ~s~Activado", 1500)
+            Susano.ShowNotification("~g~Noclip ~s~Activado (sigiloso)", 1500)
         end
     else
         SetEntityVisible(ped, true, false)
@@ -227,9 +221,9 @@ local function ChangeWeather()
     end
 end
 
--- ============================================
--- ESTRUCTURA DEL MENÚ
--- ============================================
+-- ============================================================
+-- ESTRUCTURA DEL MENÚ (con opciones reales)
+-- ============================================================
 Menu.TopLevelTabs = { { name = "SENTEXMODZ", categories = {}, autoOpen = true } }
 Menu.Categories = {
     { name = "MAIN" },
@@ -260,9 +254,9 @@ Menu.Categories = {
     } }
 }
 
--- ============================================
--- FUNCIONES DE DIBUJO DEL MENÚ PRINCIPAL
--- ============================================
+-- ============================================================
+-- DIBUJO DEL MENÚ PRINCIPAL (fondo negro sólido)
+-- ============================================================
 function Menu.GetScaledPosition()
     local s = Menu.Scale
     return {
@@ -306,8 +300,11 @@ function Menu.DrawCategories()
             for i, item in ipairs(currentTab.items) do
                 local y = itemY + (i-1)*sp.itemHeight
                 local isSel = (i == Menu.CurrentItem)
-                Menu.DrawRect(x, y, w, sp.itemHeight, 30,30,30, 200)
-                if isSel then Menu.DrawRect(x, y, 3, sp.itemHeight, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255) end
+                -- Fondo de la opción: negro sólido (alpha 255)
+                Menu.DrawRect(x, y, w, sp.itemHeight, 0,0,0, 255)
+                if isSel then
+                    Menu.DrawRect(x, y, 3, sp.itemHeight, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255)
+                end
                 Menu.DrawText(x+10, y+sp.itemHeight/2-8, item.name, 16, 255,255,255,255)
                 if item.type == "toggle" then
                     local tw, th = 36, 16
@@ -335,8 +332,10 @@ function Menu.DrawCategories()
         for i, cat in ipairs(categories) do
             local y = startY + (i-1)*itemH
             local isSel = (i+1 == Menu.CurrentCategory)
-            Menu.DrawRect(x, y, w, itemH, 30,30,30, 200)
-            if isSel then Menu.DrawRect(x, y, 3, itemH, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255) end
+            Menu.DrawRect(x, y, w, itemH, 0,0,0, 255)  -- fondo negro sólido
+            if isSel then
+                Menu.DrawRect(x, y, 3, itemH, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255)
+            end
             Menu.DrawText(x+10, y+itemH/2-8, cat.name, 16, 255,255,255,255)
             Menu.DrawText(x+w-30, y+itemH/2-8, ">", 16, 200,200,200,255)
         end
@@ -353,76 +352,59 @@ function Menu.DrawFooter()
     Menu.DrawText(sp.x+sp.width-50, y+sp.footerHeight/2-8, pos, 13, 150,150,150,255)
 end
 
--- ============================================
--- SELECTOR DE TECLA MEJORADO (con botones)
--- ============================================
-Menu.keyOptions = {
-    { name = "NUM 0", code = 0x60 },
-    { name = "F10",    code = 0x79 },
-    { name = "INS",    code = 0x2D }
+-- ============================================================
+-- NUEVO SELECTOR DE TECLA PREMIUM (con 3 teclas rápidas)
+-- ============================================================
+local quickKeys = {
+    { code = 0x60, name = "Numpad 0" },
+    { code = 0x79, name = "F10" },
+    { code = 0x2D, name = "Insert" }
 }
-Menu.selectedKeyOption = 1   -- índice de la opción elegida
+local selectedQuick = 1
 
 function Menu.DrawKeySelector(alpha)
     if alpha <= 0 then return end
     local sw, sh = (Susano.GetScreenWidth and Susano.GetScreenWidth()) or 1920, (Susano.GetScreenHeight and Susano.GetScreenHeight()) or 1080
-    local w, h = 480, 260    -- más alto para los botones
+    local w, h = 500, 280
     local x, y = (sw-w)/2, (sh-h)/2
 
-    -- Sombra y fondo
-    Menu.DrawRoundedRect(x+6, y+6, w, h, 0,0,0, 80*alpha, 12)
-    Menu.DrawRoundedRect(x, y, w, h, 0,0,0, 220*alpha, 12)
-    Menu.DrawRoundedRect(x, y, w, h, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255*alpha, 12)
+    -- Fondo principal (negro con transparencia baja para efecto glass)
+    Menu.DrawRoundedRect(x, y, w, h, 0,0,0, 200*alpha, 16)
+    -- Borde verde lima
+    Menu.DrawRoundedRect(x, y, w, h, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255*alpha, 16)
+
     -- Título
-    Menu.DrawText(x+w/2, y+35, "🔑 SELECCIONA TECLA DE APERTURA 🔑", 18, 255,255,255, 255*alpha, true)
+    Menu.DrawText(x+w/2, y+35, "🔑 SELECCIONA TECLA DE APERTURA", 22, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255*alpha, true)
 
-    -- Crear tres botones horizontales
+    -- Instrucción
+    Menu.DrawText(x+w/2, y+75, "Presiona cualquier tecla o elige una rápida:", 16, 220,220,220, 200*alpha, true)
+
+    -- Botones de teclas rápidas
     local btnW = 100
-    local btnH = 50
-    local spacing = 20
-    local totalWidth = btnW*3 + spacing*2
-    local startX = x + (w - totalWidth)/2
-    local yBtn = y + 85
-
-    for i, opt in ipairs(Menu.keyOptions) do
-        local btnX = startX + (i-1)*(btnW + spacing)
-        local isSelected = (i == Menu.selectedKeyOption)
-        -- Botón base
-        Menu.DrawRoundedRect(btnX, yBtn, btnW, btnH, 20,20,20, 200*alpha, 8)
-        if isSelected then
-            Menu.DrawRoundedRect(btnX, yBtn, btnW, btnH, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255*alpha, 8)
-            Menu.DrawText(btnX+btnW/2, yBtn+btnH/2-6, opt.name, 18, 0,0,0, 255*alpha, true)
-        else
-            Menu.DrawText(btnX+btnW/2, yBtn+btnH/2-6, opt.name, 16, 220,220,220, 255*alpha, true)
-        end
+    local btnH = 40
+    local startX = x + w/2 - (btnW * 3)/2 - 10
+    for i, key in ipairs(quickKeys) do
+        local btnX = startX + (i-1)*(btnW+10)
+        local isHover = (i == selectedQuick)
+        -- Botón
+        Menu.DrawRoundedRect(btnX, y+110, btnW, btnH, isHover and Menu.Colors.SelectedBg.r or 40, isHover and Menu.Colors.SelectedBg.g or 40, isHover and Menu.Colors.SelectedBg.b or 40, 255*alpha, 8)
+        Menu.DrawText(btnX+btnW/2, y+110+btnH/2-7, key.name, 16, 255,255,255, 255*alpha, true)
     end
 
-    -- Texto inferior
-    Menu.DrawText(x+w/2, y+155, "Usa ◀  ▶ para cambiar | ENTER para guardar", 14, 200,200,200, 180*alpha, true)
-
-    -- Si hay tecla seleccionada, mostrar confirmación adicional (opcional)
-    if Menu.SelectedKey then
-        local keyName = Menu.GetKeyName(Menu.SelectedKey)
-        Menu.DrawText(x+w/2, y+190, "Tecla seleccionada: " .. keyName, 14, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255*alpha, true)
+    -- Tecla seleccionada (si se eligió una manualmente)
+    if Menu.SelectedKeyName then
+        Menu.DrawRoundedRect(x+w/2-80, y+170, 160, 50, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 200*alpha, 10)
+        Menu.DrawText(x+w/2, y+195, Menu.SelectedKeyName, 22, 0,0,0, 255*alpha, true)
+        Menu.DrawText(x+w/2, y+240, "▶ Presiona ENTER para guardar", 14, 200,200,200, 180*alpha, true)
+    else
+        local pulse = 0.7 + math.sin(GetGameTimer()/200)*0.3
+        Menu.DrawText(x+w/2, y+200, "⌨️ Esperando tecla... ⌨️", 16, 200*pulse,200*pulse,200*pulse, 200*alpha, true)
     end
 end
 
-function Menu.Render()
-    if not (Susano and Susano.BeginFrame) then return end
-    Susano.BeginFrame()
-    if Menu.SelectingKey then
-        Menu.DrawKeySelector(1.0)
-    elseif Menu.Visible then
-        Menu.DrawHeader()
-        Menu.DrawCategories()
-        Menu.DrawFooter()
-    end
-    Susano.SubmitFrame()
-end
-
--- ============================================
--- MANEJO DE TECLAS Y NOCLIP
--- ============================================
+-- ============================================================
+-- MANEJO DE TECLAS Y NOCLIP SIGILOSO
+-- ============================================================
 Menu.KeyStates = {}
 function Menu.IsKeyJustPressed(key)
     if not Susano or not Susano.GetAsyncKeyState then return false end
@@ -434,21 +416,40 @@ end
 
 function Menu.HandleInput()
     if Menu.SelectingKey then
-        -- Navegación entre las tres opciones predefinidas
-        if Menu.IsKeyJustPressed(0x25) then  -- flecha izquierda
-            Menu.selectedKeyOption = Menu.selectedKeyOption - 1
-            if Menu.selectedKeyOption < 1 then Menu.selectedKeyOption = #Menu.keyOptions end
-        elseif Menu.IsKeyJustPressed(0x27) then  -- flecha derecha
-            Menu.selectedKeyOption = Menu.selectedKeyOption + 1
-            if Menu.selectedKeyOption > #Menu.keyOptions then Menu.selectedKeyOption = 1 end
-        elseif Menu.IsKeyJustPressed(0x0D) then  -- Enter
-            local selected = Menu.keyOptions[Menu.selectedKeyOption]
-            Menu.SelectedKey = selected.code
-            Menu.SelectedKeyName = selected.name
-            Menu.SelectingKey = false
-            Menu.Visible = false
-            if Susano and Susano.ShowNotification then
-                Susano.ShowNotification("~g~Tecla guardada: ".. selected.name, 2000)
+        -- Navegación entre teclas rápidas con flechas izquierda/derecha
+        if Menu.IsKeyJustPressed(0x25) then -- Left
+            selectedQuick = math.max(1, selectedQuick - 1)
+        elseif Menu.IsKeyJustPressed(0x27) then -- Right
+            selectedQuick = math.min(#quickKeys, selectedQuick + 1)
+        elseif Menu.IsKeyJustPressed(0x0D) then -- Enter
+            if Menu.SelectedKey then
+                Menu.SelectingKey = false
+                Menu.Visible = false
+                if Susano and Susano.ShowNotification then
+                    Susano.ShowNotification("~g~Tecla guardada: "..Menu.SelectedKeyName, 2000)
+                end
+            else
+                -- Si no se ha pulsado tecla manual, usar la tecla rápida seleccionada
+                local key = quickKeys[selectedQuick]
+                Menu.SelectedKey = key.code
+                Menu.SelectedKeyName = key.name
+                Menu.SelectingKey = false
+                Menu.Visible = false
+                if Susano and Susano.ShowNotification then
+                    Susano.ShowNotification("~g~Tecla rápida guardada: "..key.name, 2000)
+                end
+            end
+            return
+        end
+        -- Detección de cualquier tecla (excepto Enter, flechas y teclas de control)
+        local forbidden = {0x0D, 0x25, 0x27, 0x26, 0x28}
+        for k, _ in pairs(Menu.KeyNames) do
+            local isForbidden = false
+            for _, f in ipairs(forbidden) do if k == f then isForbidden = true break end end
+            if not isForbidden and Menu.IsKeyJustPressed(k) then
+                Menu.SelectedKey = k
+                Menu.SelectedKeyName = Menu.GetKeyName(k)
+                break
             end
         end
         return
@@ -489,7 +490,7 @@ function Menu.HandleInput()
                     elseif item.type == "action" then
                         if item.onClick then item.onClick() end
                     elseif item.type == "slider" then
-                        -- handled elsewhere
+                        -- los sliders se manejan con izquierda/derecha
                     end
                 end
             elseif Menu.IsKeyJustPressed(0x25) then
@@ -524,9 +525,11 @@ function Menu.HandleInput()
     end
 end
 
--- ============================================
--- BUCLE DE NOCLIP
--- ============================================
+-- ============================================================
+-- NOCLIP SIGILOSO (evita detección por movimientos bruscos)
+-- ============================================================
+local lastSyncTime = 0
+local lastPos = nil
 CreateThread(function()
     while true do
         Wait(0)
@@ -542,43 +545,80 @@ CreateThread(function()
             local rx = math.cos(yaw)
             local ry = math.sin(yaw)
             local x, y, z = table.unpack(GetEntityCoords(ped))
+            local moved = false
             if IsControlPressed(0, 32) then -- W
                 x = x + dirX * speed
                 y = y + dirY * speed
                 z = z + dirZ * speed
+                moved = true
             end
             if IsControlPressed(0, 269) then -- S
                 x = x - dirX * speed
                 y = y - dirY * speed
                 z = z - dirZ * speed
+                moved = true
             end
             if IsControlPressed(0, 34) then -- A
                 x = x - rx * speed
                 y = y - ry * speed
+                moved = true
             end
             if IsControlPressed(0, 35) then -- D
                 x = x + rx * speed
                 y = y + ry * speed
+                moved = true
             end
             if IsControlPressed(0, 22) then -- SPACE
                 z = z + speed
+                moved = true
             end
             if IsControlPressed(0, 36) then -- CTRL
                 z = z - speed
+                moved = true
             end
-            SetEntityCoordsNoOffset(ped, x, y, z, true, true, true)
+
+            if moved then
+                -- Movimiento local sin sincronización inmediata
+                SetEntityCoordsNoOffset(ped, x, y, z, true, true, true)
+                -- Solo sincronizar con el servidor cada 500ms para evitar detecciones
+                local now = GetGameTimer()
+                if now - lastSyncTime > 500 then
+                    lastSyncTime = now
+                    -- Forzar una actualización de red más suave
+                    NetworkUpdateEntityState(ped)
+                end
+            end
+
+            -- Ocultar el ped localmente y desactivar colisiones
             SetEntityVisible(ped, false, false)
-        elseif not Menu.noclipActive and not Menu.godmodeActive then
-            SetEntityVisible(PlayerPedId(), true, false)
+            SetEntityCollision(ped, false, false)
+            FreezeEntityPosition(ped, true)
+        elseif not Menu.noclipActive then
+            local ped = PlayerPedId()
+            SetEntityVisible(ped, true, false)
+            SetEntityCollision(ped, true, true)
+            FreezeEntityPosition(ped, false)
         end
     end
 end)
 
--- ============================================
--- INICIALIZACIÓN
--- ============================================
+-- ============================================================
+-- RENDER Y CICLO PRINCIPAL
+-- ============================================================
+function Menu.Render()
+    if not (Susano and Susano.BeginFrame) then return end
+    Susano.BeginFrame()
+    if Menu.SelectingKey then
+        Menu.DrawKeySelector(1.0)
+    elseif Menu.Visible then
+        Menu.DrawHeader()
+        Menu.DrawCategories()
+        Menu.DrawFooter()
+    end
+    Susano.SubmitFrame()
+end
+
 CreateThread(function()
-    Menu.ApplyTheme("Lime")
     Menu.LoadingStartTime = GetGameTimer() or 0
     while Menu.IsLoading do
         local elapsed = (GetGameTimer() or 0) - Menu.LoadingStartTime
@@ -594,6 +634,7 @@ CreateThread(function()
 end)
 
 CreateThread(function()
+    Menu.ApplyTheme("Lime")
     while true do
         Menu.Render()
         if Menu.LoadingComplete then Menu.HandleInput() end
