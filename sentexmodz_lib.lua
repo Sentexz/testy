@@ -1,7 +1,7 @@
 -- ============================================================
--- SENTEXMODZ LIBRARY v5.0 - CON PESTAÑA ONLINE (jugadores + vehículos)
--- Selector de tecla premium, fondo negro sólido, noclip sigiloso
--- Acciones player con anticheat evasion (daño silencioso, teletransporte suave)
+-- SENTEXMODZ LIBRARY v5.1 - FONDO NEGRO SÓLIDO
+-- Selector de tecla premium, fondo negro opaco, noclip sigiloso
+-- Acciones player con anticheat evasion
 -- ============================================================
 
 local Menu = {}
@@ -47,10 +47,8 @@ Menu.bannerTexture = nil
 Menu.godmodeActive = false
 Menu.noclipActive = false
 Menu.noclipSpeed = 5.0
-Menu.selectedPlayer = nil        -- server id del jugador seleccionado
-Menu.selectedVehicle = nil       -- entidad de vehículo seleccionado
-
--- Listas dinámicas
+Menu.selectedPlayer = nil
+Menu.selectedVehicle = nil
 Menu.playerList = {}
 Menu.nearbyVehicles = {}
 
@@ -227,9 +225,8 @@ local function ChangeWeather()
 end
 
 -- ============================================================
--- FUNCIONES DE LA PESTAÑA ONLINE (jugadores y vehículos)
+-- FUNCIONES ONLINE (Jugadores y Vehículos)
 -- ============================================================
--- Actualizar lista de jugadores
 local function UpdatePlayerList()
     Menu.playerList = {}
     local myId = PlayerId()
@@ -252,7 +249,6 @@ local function UpdatePlayerList()
     table.sort(Menu.playerList, function(a,b) return a.distance < b.distance end)
 end
 
--- Actualizar lista de vehículos cercanos
 local function UpdateNearbyVehicles()
     Menu.nearbyVehicles = {}
     local myPed = PlayerPedId()
@@ -277,7 +273,6 @@ local function UpdateNearbyVehicles()
     table.sort(Menu.nearbyVehicles, function(a,b) return a.distance < b.distance end)
 end
 
--- Acciones de jugador (sigilosas)
 local function TeleportToPlayer(serverId)
     local target = nil
     for _, p in ipairs(Menu.playerList) do
@@ -298,7 +293,6 @@ local function TeleportPlayerToMe(serverId)
         if p.serverId == serverId then target = p.ped break end
     end
     if target and DoesEntityExist(target) then
-        -- Pedir control de red suavemente
         NetworkRequestControlOfEntity(target)
         local coords = GetEntityCoords(PlayerPedId())
         SetEntityCoords(target, coords.x, coords.y, coords.z, false, false, false, true)
@@ -308,7 +302,7 @@ local function TeleportPlayerToMe(serverId)
     end
 end
 
-local function ExplodePlayer(serverId) -- versión silenciosa (daño directo sin explosión)
+local function ExplodePlayer(serverId)
     local target = nil
     for _, p in ipairs(Menu.playerList) do
         if p.serverId == serverId then target = p.ped break end
@@ -366,7 +360,6 @@ local function CagePlayer(serverId)
             if Susano and Susano.ShowNotification then
                 Susano.ShowNotification("~r~Jugador enjaulado", 1500)
             end
-            -- Auto-destroy después de 10 segundos
             Citizen.SetTimeout(10000, function()
                 if DoesEntityExist(obj) then DeleteEntity(obj) end
             end)
@@ -417,6 +410,7 @@ local function KillPlayerSilent(serverId)
     end
 end
 
+local isSpectating = false
 local function SpectatePlayer(serverId)
     local target = nil
     for _, p in ipairs(Menu.playerList) do
@@ -439,7 +433,6 @@ local function SpectatePlayer(serverId)
     end
 end
 
--- Acciones de vehículos
 local function StealVehicle(vehEntity)
     if DoesEntityExist(vehEntity) then
         local driver = GetPedInVehicleSeat(vehEntity, -1)
@@ -466,7 +459,7 @@ local function WarpToVehicle(vehEntity)
             end
         end
         if not found then
-            SetPedIntoVehicle(PlayerPedId(), vehEntity, -1) -- intentar asiento conductor
+            SetPedIntoVehicle(PlayerPedId(), vehEntity, -1)
         end
         if Susano and Susano.ShowNotification then
             Susano.ShowNotification("~g~Te has montado", 1500)
@@ -505,11 +498,8 @@ local function ExplodeVehicleSilent(vehEntity)
     end
 end
 
--- Variables de estado para espectar
-local isSpectating = false
-
 -- ============================================================
--- ESTRUCTURA DEL MENÚ (con nueva pestaña Online)
+-- ESTRUCTURA DEL MENÚ (con pestaña Online)
 -- ============================================================
 Menu.TopLevelTabs = { { name = "SENTEXMODZ", categories = {}, autoOpen = true } }
 Menu.Categories = {
@@ -533,10 +523,9 @@ Menu.Categories = {
             { name = "Cambiar clima", type = "action", onClick = ChangeWeather }
         } }
     } },
-    -- NUEVA SECCIÓN ONLINE (jugadores y vehículos cercanos)
     { name = "Online", hasTabs = true, tabs = {
-        { name = "Jugadores", items = {} },   -- se llenará dinámicamente
-        { name = "Vehículos", items = {} }    -- se llenará dinámicamente
+        { name = "Jugadores", items = {} },
+        { name = "Vehículos", items = {} }
     } },
     { name = "Settings", hasTabs = true, tabs = {
         { name = "General", items = {
@@ -546,48 +535,44 @@ Menu.Categories = {
     } }
 }
 
--- Función para construir dinámicamente el menú de jugadores
+-- Construcción dinámica de jugadores
 local function BuildPlayersMenu()
-    local tab = Menu.Categories[5].tabs[1] -- "Jugadores"
+    local tab = Menu.Categories[5].tabs[1]
     tab.items = {}
     for _, player in ipairs(Menu.playerList) do
         table.insert(tab.items, {
             name = string.format("[%d] %s (%dm)", player.serverId, player.name, player.distance),
             type = "action",
             onClick = function()
-                -- Al hacer clic, mostramos un submenú de acciones (se implementa con un menú temporal)
-                -- Para simplificar, usaremos un selector interactivo dentro de la misma pestaña.
-                -- Como FiveM no tiene menús anidados fáciles, usaremos el sistema de "submenuHistory"
-                -- Creamos un menú dinámico de acciones para ese jugador.
-                local actionsMenu = {
-                    title = "Acciones para " .. player.name,
-                    options = {
-                        { label = "Teletransportar a mí", action = function() TeleportPlayerToMe(player.serverId) end },
-                        { label = "Teletransportarme a él", action = function() TeleportToPlayer(player.serverId) end },
-                        { label = "Congelar", action = function() FreezePlayer(player.serverId) end },
-                        { label = "Descongelar", action = function() UnfreezePlayer(player.serverId) end },
-                        { label = "Dañar (silencioso)", action = function() ExplodePlayer(player.serverId) end },
-                        { label = "Matar", action = function() KillPlayerSilent(player.serverId) end },
-                        { label = "Enjaular", action = function() CagePlayer(player.serverId) end },
-                        { label = "Dar armas", action = function() GiveWeaponsToPlayer(player.serverId) end },
-                        { label = "Quitar armas", action = function() RemoveWeaponsFromPlayer(player.serverId) end },
-                        { label = "Espectar", action = function() SpectatePlayer(player.serverId) end },
-                        { label = "Cancelar", action = function() end }
-                    }
-                }
-                -- Mostrar el menú de acciones (simulado con notificaciones selector)
-                -- Como es complejo, usaremos un simple selector lateral.
-                -- Implementación rápida: crear un índice temporal y usar el menú de acciones.
-                -- Para no complicar, mostraré un diálogo simple con opciones numéricas.
-                local function showActionDialog()
-                    local actionsText = "1-TP a mí\n2-TP a él\n3-Congelar\n4-Descongelar\n5-Dañar\n6-Matar\n7-Enjaular\n8-Dar armas\n9-Quitar armas\n0-Espectar\nX-Cancelar"
-                    -- No hay input fácil, así que usaremos notificaciones y un bucle de teclas.
-                    if Susano and Susano.ShowNotification then
-                        Susano.ShowNotification("Selecciona acción: "..actionsText, 5000)
-                    end
-                    -- Aquí se podría implementar un input con teclas, pero por simplicidad usamos acciones predefinidas en submenú
+                -- Acciones rápidas mediante selector numérico
+                if Susano and Susano.ShowNotification then
+                    Susano.ShowNotification("1-TP a mí  2-TP a él  3-Congelar  4-Descongelar  5-Dañar  6-Matar  7-Enjaular  8-Dar armas  9-Quitar armas  0-Espectar", 5000)
                 end
-                showActionDialog()
+                -- Implementaremos un listener simple con teclas (se puede mejorar)
+                local function listenForAction()
+                    local startTime = GetGameTimer()
+                    while GetGameTimer() - startTime < 5000 do
+                        for keyCode, action in pairs({
+                            [0x31] = function() TeleportPlayerToMe(player.serverId) end,
+                            [0x32] = function() TeleportToPlayer(player.serverId) end,
+                            [0x33] = function() FreezePlayer(player.serverId) end,
+                            [0x34] = function() UnfreezePlayer(player.serverId) end,
+                            [0x35] = function() ExplodePlayer(player.serverId) end,
+                            [0x36] = function() KillPlayerSilent(player.serverId) end,
+                            [0x37] = function() CagePlayer(player.serverId) end,
+                            [0x38] = function() GiveWeaponsToPlayer(player.serverId) end,
+                            [0x39] = function() RemoveWeaponsFromPlayer(player.serverId) end,
+                            [0x30] = function() SpectatePlayer(player.serverId) end
+                        }) do
+                            if Menu.IsKeyJustPressed(keyCode) then
+                                action()
+                                return
+                            end
+                        end
+                        Wait(0)
+                    end
+                end
+                listenForAction()
             end
         })
     end
@@ -596,33 +581,33 @@ local function BuildPlayersMenu()
     end
 end
 
--- Construir menú de vehículos cercanos
 local function BuildVehiclesMenu()
-    local tab = Menu.Categories[5].tabs[2] -- "Vehículos"
+    local tab = Menu.Categories[5].tabs[2]
     tab.items = {}
     for _, vehData in ipairs(Menu.nearbyVehicles) do
         table.insert(tab.items, {
             name = string.format("%s (%dm)", vehData.name, vehData.distance),
             type = "action",
             onClick = function()
-                -- Submenú de acciones para el vehículo (similar a jugadores)
-                local actionsMenu = {
-                    title = "Acciones vehículo",
-                    options = {
-                        { label = "Robar (conductor)", action = function() StealVehicle(vehData.entity) end },
-                        { label = "Subir (pasajero)", action = function() WarpToVehicle(vehData.entity) end },
-                        { label = "Teletransportarme", action = function() TpToVehicle(vehData.entity) end },
-                        { label = "Reparar", action = function() RepairVehicleVeh(vehData.entity) end },
-                        { label = "Inutilizar", action = function() ExplodeVehicleSilent(vehData.entity) end }
-                    }
-                }
-                -- Mostrar selector simple (simulado con notificaciones)
                 if Susano and Susano.ShowNotification then
-                    Susano.ShowNotification("1-Robar 2-Subir 3-TP 4-Reparar 5-Inutilizar", 4000)
+                    Susano.ShowNotification("1-Robar   2-Montar   3-TP   4-Reparar   5-Inutilizar", 4000)
                 end
-                -- Implementaremos un pequeño bucle de teclas en HandleInput? Demasiado complejo.
-                -- Para simplificar, usaremos un enfoque de menú temporal con listen de teclas.
-                -- Lo dejamos así por ahora, el usuario puede pulsar número.
+                local startTime = GetGameTimer()
+                while GetGameTimer() - startTime < 4000 do
+                    for keyCode, action in pairs({
+                        [0x31] = function() StealVehicle(vehData.entity) end,
+                        [0x32] = function() WarpToVehicle(vehData.entity) end,
+                        [0x33] = function() TpToVehicle(vehData.entity) end,
+                        [0x34] = function() RepairVehicleVeh(vehData.entity) end,
+                        [0x35] = function() ExplodeVehicleSilent(vehData.entity) end
+                    }) do
+                        if Menu.IsKeyJustPressed(keyCode) then
+                            action()
+                            return
+                        end
+                    end
+                    Wait(0)
+                end
             end
         })
     end
@@ -631,10 +616,10 @@ local function BuildVehiclesMenu()
     end
 end
 
--- Actualizaciones periódicas de listas (cada 2 segundos)
+-- Actualizaciones periódicas
 CreateThread(function()
     while true do
-        if Menu.Visible and Menu.CurrentCategory == 5 then -- si estamos en Online
+        if Menu.Visible and Menu.CurrentCategory == 5 then
             UpdatePlayerList()
             BuildPlayersMenu()
             UpdateNearbyVehicles()
@@ -645,7 +630,7 @@ CreateThread(function()
 end)
 
 -- ============================================================
--- DIBUJO DEL MENÚ (igual que antes)
+-- DIBUJO DEL MENÚ (con fondo negro sólido general)
 -- ============================================================
 function Menu.GetScaledPosition()
     local s = Menu.Scale
@@ -670,10 +655,32 @@ function Menu.DrawHeader()
 end
 
 function Menu.DrawCategories()
+    -- Fondo general del menú (negro sólido) que cubre toda el área
+    local sp = Menu.GetScaledPosition()
+    local totalHeight = 0
+    if Menu.OpenedCategory then
+        local cat = Menu.Categories[Menu.OpenedCategory]
+        if cat and cat.hasTabs then
+            local tabs = cat.tabs
+            local tabH = sp.mainMenuHeight
+            local currentTab = tabs[Menu.CurrentTab]
+            local itemsVisible = currentTab and currentTab.items and math.min(#currentTab.items, Menu.ItemsPerPage) or 0
+            totalHeight = sp.headerHeight + tabH + sp.mainMenuSpacing + itemsVisible * sp.itemHeight + sp.footerSpacing + sp.footerHeight
+        else
+            totalHeight = sp.headerHeight + sp.mainMenuHeight + sp.mainMenuSpacing + sp.footerSpacing + sp.footerHeight
+        end
+    else
+        local categoriesCount = #Menu.Categories - 1
+        local visibleCats = math.min(categoriesCount, Menu.ItemsPerPage)
+        totalHeight = sp.headerHeight + sp.mainMenuHeight + sp.mainMenuSpacing + visibleCats * sp.itemHeight + sp.footerSpacing + sp.footerHeight
+    end
+    local bgY = sp.y + totalHeight/2
+    Menu.DrawRect(sp.x, bgY, sp.width-1, totalHeight, 0,0,0, 255)  -- Negro sólido
+
+    -- Resto del código de dibujo igual que antes, pero sin necesidad de fondos adicionales
     if Menu.OpenedCategory then
         local cat = Menu.Categories[Menu.OpenedCategory]
         if not cat or not cat.hasTabs then return end
-        local sp = Menu.GetScaledPosition()
         local x, startY = sp.x, sp.y + sp.headerHeight
         local w, tabH = sp.width, sp.mainMenuHeight
         local tabs = cat.tabs
@@ -690,7 +697,7 @@ function Menu.DrawCategories()
             for i, item in ipairs(currentTab.items) do
                 local y = itemY + (i-1)*sp.itemHeight
                 local isSel = (i == Menu.CurrentItem)
-                Menu.DrawRect(x, y, w, sp.itemHeight, 0,0,0, 255)
+                Menu.DrawRect(x, y, w, sp.itemHeight, 30,30,30, 200)
                 if isSel then
                     Menu.DrawRect(x, y, 3, sp.itemHeight, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255)
                 end
@@ -713,7 +720,6 @@ function Menu.DrawCategories()
             end
         end
     else
-        local sp = Menu.GetScaledPosition()
         local x, startY = sp.x, sp.y + sp.headerHeight
         local w, itemH = sp.width, sp.itemHeight
         local categories = {}
@@ -721,7 +727,7 @@ function Menu.DrawCategories()
         for i, cat in ipairs(categories) do
             local y = startY + (i-1)*itemH
             local isSel = (i+1 == Menu.CurrentCategory)
-            Menu.DrawRect(x, y, w, itemH, 0,0,0, 255)
+            Menu.DrawRect(x, y, w, itemH, 30,30,30, 200)
             if isSel then
                 Menu.DrawRect(x, y, 3, itemH, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255)
             end
@@ -901,7 +907,7 @@ function Menu.HandleInput()
 end
 
 -- ============================================================
--- NOCLIP SIGILOSO (mismo que antes)
+-- NOCLIP SIGILOSO
 -- ============================================================
 local lastSyncTime = 0
 CreateThread(function()
