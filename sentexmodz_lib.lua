@@ -40,7 +40,7 @@ Menu.Colors = {
 }
 Menu.CurrentTheme = "Lime"
 
--- Banner
+-- Banner (sin texto, la imagen ya tiene el logo)
 Menu.Banner = {
     enabled = true,
     imageUrl = "https://i.imgur.com/JV6Drrz.png",
@@ -49,6 +49,19 @@ Menu.Banner = {
 Menu.bannerTexture = nil
 Menu.bannerWidth = 0
 Menu.bannerHeight = 0
+
+-- Variables de carga y selector de tecla
+Menu.LoadingBarAlpha = 0.0
+Menu.KeySelectorAlpha = 0.0
+Menu.KeybindsInterfaceAlpha = 0.0
+Menu.LoadingProgress = 0.0
+Menu.IsLoading = true
+Menu.LoadingComplete = false
+Menu.LoadingStartTime = nil
+Menu.LoadingDuration = 3000
+Menu.SelectingKey = false
+Menu.SelectedKey = nil
+Menu.SelectedKeyName = nil
 
 -- Posición y tamaño (en píxeles, para que sea más fiable)
 Menu.Position = {
@@ -97,7 +110,6 @@ function Menu.DrawText(x, y, text, size, r, g, b, a)
 end
 
 function Menu.DrawRoundedRect(x, y, w, h, r, g, b, a, radius)
-    -- versión simplificada (sin redondeo real, solo rectángulo)
     Menu.DrawRect(x, y, w, h, r, g, b, a)
 end
 
@@ -149,7 +161,7 @@ function Menu.GetScaledPosition()
     }
 end
 
--- Dibujar cabecera con banner
+-- Dibujar cabecera con banner (sin texto extra)
 function Menu.DrawHeader()
     local sp = Menu.GetScaledPosition()
     local x = sp.x
@@ -162,9 +174,6 @@ function Menu.DrawHeader()
         Susano.DrawImage(Menu.bannerTexture, x, y, w, bh, 1,1,1,1,0)
     else
         Menu.DrawRect(x, y, w, h, Menu.Colors.HeaderPink.r, Menu.Colors.HeaderPink.g, Menu.Colors.HeaderPink.b, 255)
-        local logoX = x + w/2 - 60
-        local logoY = y + h/2 - 15
-        Menu.DrawText(logoX, logoY, "SENTEXMODZ", 28, 255,255,255,255)
     end
 end
 
@@ -194,7 +203,7 @@ function Menu.DrawTabs(category, x, startY, width, tabHeight)
     end
 end
 
--- Dibujar un elemento (toggle, selector, etc, simplificado)
+-- Dibujar un elemento (toggle, selector, etc)
 function Menu.DrawItem(x, y, w, h, item, isSelected)
     Menu.DrawRect(x, y, w, h, 30,30,30, 200)
     if isSelected then
@@ -216,7 +225,6 @@ function Menu.DrawItem(x, y, w, h, item, isSelected)
         local tw = string.len(txt) * 8
         Menu.DrawText(x + w - tw - 10, y+h/2-8, txt, 16, 200,200,200,255)
     elseif item.type == "slider" then
-        -- slider simplificado
         local sw = 80
         local sh = 8
         local sx = x + w - sw - 10
@@ -321,11 +329,36 @@ function Menu.DrawBackground()
     -- fondo negro transparente opcional
 end
 
+-- Dibujar selector de tecla
+function Menu.DrawKeySelector(alpha)
+    if alpha <= 0 then return end
+    local screenW, screenH = 1920, 1080
+    if Susano.GetScreenWidth and Susano.GetScreenHeight then
+        screenW = Susano.GetScreenWidth()
+        screenH = Susano.GetScreenHeight()
+    end
+    local width = 400
+    local height = 150
+    local x = (screenW - width) / 2
+    local y = (screenH - height) / 2
+    Menu.DrawRect(x, y, width, height, 0,0,0, 200)
+    Menu.DrawText(x+width/2, y+40, "SENTEXMODZ", 24, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255, true)
+    Menu.DrawText(x+width/2, y+80, "Presiona una tecla", 18, 255,255,255, 255, true)
+    if Menu.SelectedKeyName then
+        Menu.DrawText(x+width/2, y+115, "Tecla: " .. Menu.SelectedKeyName .. " - Pulsa ENTER", 14, 200,200,200, 255, true)
+    end
+end
+
+function Menu.DrawLoadingBar(alpha) end
+function Menu.DrawKeybindsInterface(alpha) end
+
 -- Render principal
 function Menu.Render()
     if not (Susano and Susano.BeginFrame) then return end
     Susano.BeginFrame()
-    if Menu.Visible then
+    if Menu.SelectingKey then
+        Menu.DrawKeySelector(1.0)
+    elseif Menu.Visible then
         Menu.DrawBackground()
         Menu.DrawHeader()
         Menu.DrawCategories()
@@ -335,7 +368,7 @@ function Menu.Render()
     Susano.SubmitFrame()
 end
 
--- Manejo de teclas (simplificado basado en el original)
+-- Manejo de teclas
 Menu.KeyStates = {}
 function Menu.IsKeyJustPressed(key)
     if not Susano or not Susano.GetAsyncKeyState then return false end
@@ -346,9 +379,37 @@ function Menu.IsKeyJustPressed(key)
 end
 
 function Menu.HandleInput()
-    if not Menu.Visible then return end
-    local toggleKey = Menu.SelectedKey or 0x31 -- tecla '1'
-    if Menu.IsKeyJustPressed(toggleKey) then
+    if Menu.SelectingKey then
+        if Menu.IsKeyJustPressed(0x0D) and Menu.SelectedKey then
+            Menu.SelectingKey = false
+            Menu.Visible = false
+            if Susano and Susano.ShowNotification then
+                Susano.ShowNotification("~g~Tecla guardada: " .. Menu.SelectedKeyName, 2000)
+            end
+            return
+        end
+        local keys = {0x41,0x42,0x43,0x44,0x45,0x46,0x47,0x48,0x49,0x4A,0x4B,0x4C,0x4D,
+                      0x4E,0x4F,0x50,0x51,0x52,0x53,0x54,0x55,0x56,0x57,0x58,0x59,0x5A,
+                      0x30,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,0x20,0x1B,0x08,0x09,
+                      0x10,0x11,0x12,0x25,0x26,0x27,0x28,0x70,0x71,0x72,0x73,0x74,0x75,0x76,0x77,0x78,0x79,0x7A,0x7B}
+        for _, k in ipairs(keys) do
+            if Menu.IsKeyJustPressed(k) then
+                Menu.SelectedKey = k
+                Menu.SelectedKeyName = string.format("0x%02X", k)
+                break
+            end
+        end
+        return
+    end
+
+    if not Menu.Visible then
+        if Menu.SelectedKey and Menu.IsKeyJustPressed(Menu.SelectedKey) then
+            Menu.Visible = true
+        end
+        return
+    end
+
+    if Menu.IsKeyJustPressed(Menu.SelectedKey) then
         Menu.Visible = false
         if Susano and Susano.ResetFrame then Susano.ResetFrame() end
         return
@@ -359,15 +420,15 @@ function Menu.HandleInput()
         if not cat then Menu.OpenedCategory = nil return end
         local tab = cat.tabs[Menu.CurrentTab]
         if tab and tab.items then
-            if Menu.IsKeyJustPressed(0x26) then -- up
+            if Menu.IsKeyJustPressed(0x26) then
                 Menu.CurrentItem = Menu.CurrentItem - 1
                 if Menu.CurrentItem < 1 then Menu.CurrentItem = #tab.items end
-            elseif Menu.IsKeyJustPressed(0x28) then -- down
+            elseif Menu.IsKeyJustPressed(0x28) then
                 Menu.CurrentItem = Menu.CurrentItem + 1
                 if Menu.CurrentItem > #tab.items then Menu.CurrentItem = 1 end
-            elseif Menu.IsKeyJustPressed(0x08) then -- backspace
+            elseif Menu.IsKeyJustPressed(0x08) then
                 Menu.OpenedCategory = nil
-            elseif Menu.IsKeyJustPressed(0x0D) then -- enter
+            elseif Menu.IsKeyJustPressed(0x0D) then
                 local item = tab.items[Menu.CurrentItem]
                 if item and item.type == "toggle" then
                     item.value = not item.value
@@ -378,13 +439,13 @@ function Menu.HandleInput()
             end
         end
     else
-        if Menu.IsKeyJustPressed(0x26) then -- up
+        if Menu.IsKeyJustPressed(0x26) then
             Menu.CurrentCategory = Menu.CurrentCategory - 1
             if Menu.CurrentCategory < 2 then Menu.CurrentCategory = #Menu.Categories end
-        elseif Menu.IsKeyJustPressed(0x28) then -- down
+        elseif Menu.IsKeyJustPressed(0x28) then
             Menu.CurrentCategory = Menu.CurrentCategory + 1
             if Menu.CurrentCategory > #Menu.Categories then Menu.CurrentCategory = 2 end
-        elseif Menu.IsKeyJustPressed(0x0D) then -- enter
+        elseif Menu.IsKeyJustPressed(0x0D) then
             local cat = Menu.Categories[Menu.CurrentCategory]
             if cat and cat.hasTabs then
                 Menu.OpenedCategory = Menu.CurrentCategory
@@ -396,6 +457,21 @@ function Menu.HandleInput()
 end
 
 -- Inicialización
+CreateThread(function()
+    Menu.LoadingStartTime = GetGameTimer() or 0
+    while Menu.IsLoading do
+        local elapsed = (GetGameTimer() or 0) - Menu.LoadingStartTime
+        Menu.LoadingProgress = math.min(100, (elapsed / Menu.LoadingDuration) * 100)
+        if elapsed >= Menu.LoadingDuration then
+            Menu.IsLoading = false
+            Menu.LoadingComplete = true
+            Menu.SelectingKey = true
+            break
+        end
+        Wait(0)
+    end
+end)
+
 CreateThread(function()
     Menu.ApplyTheme("Lime")
     while true do
