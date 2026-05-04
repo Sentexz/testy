@@ -1,6 +1,5 @@
 -- ============================================================
--- SENTEXMODZ LIBRARY v3.1 - CORREGIDA (ApplyTheme existe)
--- Diseño verde lima, banner personalizado, todas las acciones
+-- SENTEXMODZ LIBRARY v3.2 - Selector de tecla estilo menú
 -- ============================================================
 
 local Menu = {}
@@ -47,7 +46,7 @@ Menu.godmodeActive = false
 Menu.noclipActive = false
 Menu.noclipSpeed = 5.0
 
--- Posición y tamaño (se adapta a la pantalla)
+-- Posición y tamaño
 Menu.Position = { x = 50, y = 100, width = 360, itemHeight = 34, mainMenuHeight = 26,
     headerHeight = 100, footerHeight = 26, footerSpacing = 5, mainMenuSpacing = 5,
     footerRadius = 4, itemRadius = 4, scrollbarWidth = 12, scrollbarPadding = 3, headerRadius = 6 }
@@ -79,7 +78,7 @@ Menu.KeyNames = {
 function Menu.GetKeyName(code) return Menu.KeyNames[code] or ("0x"..string.format("%02X", code)) end
 
 -- ============================================
--- FUNCIONES DE DIBUJO (usando Susano)
+-- FUNCIONES DE DIBUJO
 -- ============================================
 function Menu.DrawRect(x,y,w,h,r,g,b,a)
     if Susano and Susano.DrawFilledRect then
@@ -126,7 +125,7 @@ function Menu.LoadBannerTexture(url)
 end
 
 -- ============================================
--- APLICAR TEMA (debe existir antes de usarse)
+-- APLICAR TEMA
 -- ============================================
 function Menu.ApplyTheme(themeName)
     Menu.CurrentTheme = "Lime"
@@ -262,7 +261,7 @@ Menu.Categories = {
 }
 
 -- ============================================
--- FUNCIONES DE DIBUJO DEL MENÚ
+-- FUNCIONES DE DIBUJO DEL MENÚ PRINCIPAL
 -- ============================================
 function Menu.GetScaledPosition()
     local s = Menu.Scale
@@ -354,23 +353,57 @@ function Menu.DrawFooter()
     Menu.DrawText(sp.x+sp.width-50, y+sp.footerHeight/2-8, pos, 13, 150,150,150,255)
 end
 
+-- ============================================
+-- SELECTOR DE TECLA MEJORADO (con botones)
+-- ============================================
+Menu.keyOptions = {
+    { name = "NUM 0", code = 0x60 },
+    { name = "F10",    code = 0x79 },
+    { name = "INS",    code = 0x2D }
+}
+Menu.selectedKeyOption = 1   -- índice de la opción elegida
+
 function Menu.DrawKeySelector(alpha)
     if alpha <= 0 then return end
     local sw, sh = (Susano.GetScreenWidth and Susano.GetScreenWidth()) or 1920, (Susano.GetScreenHeight and Susano.GetScreenHeight()) or 1080
-    local w, h = 480, 220
+    local w, h = 480, 260    -- más alto para los botones
     local x, y = (sw-w)/2, (sh-h)/2
-    Menu.DrawRoundedRect(x+5, y+5, w, h, 0,0,0, 100*alpha, 12)
+
+    -- Sombra y fondo
+    Menu.DrawRoundedRect(x+6, y+6, w, h, 0,0,0, 80*alpha, 12)
     Menu.DrawRoundedRect(x, y, w, h, 0,0,0, 220*alpha, 12)
     Menu.DrawRoundedRect(x, y, w, h, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255*alpha, 12)
-    Menu.DrawText(x+w/2, y+45, "⚙  SELECCIONA UNA TECLA  ⚙", 20, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255*alpha, true)
-    Menu.DrawText(x+w/2, y+90, "Presiona cualquier tecla para abrir el menú", 16, 220,220,220, 220*alpha, true)
-    if Menu.SelectedKeyName then
-        Menu.DrawRoundedRect(x+w/2-60, y+125, 120, 50, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 200*alpha, 8)
-        Menu.DrawText(x+w/2, y+150, Menu.SelectedKeyName, 22, 0,0,0, 255*alpha, true)
-        Menu.DrawText(x+w/2, y+190, "Presiona ENTER para guardar", 14, 200,200,200, 180*alpha, true)
-    else
-        local pulse = 0.7 + math.sin(GetGameTimer()/200)*0.3
-        Menu.DrawText(x+w/2, y+140, "⌨️ Esperando tecla... ⌨️", 16, 200*pulse,200*pulse,200*pulse, 200*alpha, true)
+    -- Título
+    Menu.DrawText(x+w/2, y+35, "🔑 SELECCIONA TECLA DE APERTURA 🔑", 18, 255,255,255, 255*alpha, true)
+
+    -- Crear tres botones horizontales
+    local btnW = 100
+    local btnH = 50
+    local spacing = 20
+    local totalWidth = btnW*3 + spacing*2
+    local startX = x + (w - totalWidth)/2
+    local yBtn = y + 85
+
+    for i, opt in ipairs(Menu.keyOptions) do
+        local btnX = startX + (i-1)*(btnW + spacing)
+        local isSelected = (i == Menu.selectedKeyOption)
+        -- Botón base
+        Menu.DrawRoundedRect(btnX, yBtn, btnW, btnH, 20,20,20, 200*alpha, 8)
+        if isSelected then
+            Menu.DrawRoundedRect(btnX, yBtn, btnW, btnH, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255*alpha, 8)
+            Menu.DrawText(btnX+btnW/2, yBtn+btnH/2-6, opt.name, 18, 0,0,0, 255*alpha, true)
+        else
+            Menu.DrawText(btnX+btnW/2, yBtn+btnH/2-6, opt.name, 16, 220,220,220, 255*alpha, true)
+        end
+    end
+
+    -- Texto inferior
+    Menu.DrawText(x+w/2, y+155, "Usa ◀  ▶ para cambiar | ENTER para guardar", 14, 200,200,200, 180*alpha, true)
+
+    -- Si hay tecla seleccionada, mostrar confirmación adicional (opcional)
+    if Menu.SelectedKey then
+        local keyName = Menu.GetKeyName(Menu.SelectedKey)
+        Menu.DrawText(x+w/2, y+190, "Tecla seleccionada: " .. keyName, 14, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255*alpha, true)
     end
 end
 
@@ -401,19 +434,21 @@ end
 
 function Menu.HandleInput()
     if Menu.SelectingKey then
-        if Menu.IsKeyJustPressed(0x0D) and Menu.SelectedKey then
+        -- Navegación entre las tres opciones predefinidas
+        if Menu.IsKeyJustPressed(0x25) then  -- flecha izquierda
+            Menu.selectedKeyOption = Menu.selectedKeyOption - 1
+            if Menu.selectedKeyOption < 1 then Menu.selectedKeyOption = #Menu.keyOptions end
+        elseif Menu.IsKeyJustPressed(0x27) then  -- flecha derecha
+            Menu.selectedKeyOption = Menu.selectedKeyOption + 1
+            if Menu.selectedKeyOption > #Menu.keyOptions then Menu.selectedKeyOption = 1 end
+        elseif Menu.IsKeyJustPressed(0x0D) then  -- Enter
+            local selected = Menu.keyOptions[Menu.selectedKeyOption]
+            Menu.SelectedKey = selected.code
+            Menu.SelectedKeyName = selected.name
             Menu.SelectingKey = false
             Menu.Visible = false
             if Susano and Susano.ShowNotification then
-                Susano.ShowNotification("~g~Tecla guardada: "..Menu.SelectedKeyName, 2000)
-            end
-            return
-        end
-        for k, _ in pairs(Menu.KeyNames) do
-            if k ~= 0x0D and Menu.IsKeyJustPressed(k) then
-                Menu.SelectedKey = k
-                Menu.SelectedKeyName = Menu.GetKeyName(k)
-                break
+                Susano.ShowNotification("~g~Tecla guardada: ".. selected.name, 2000)
             end
         end
         return
@@ -454,7 +489,7 @@ function Menu.HandleInput()
                     elseif item.type == "action" then
                         if item.onClick then item.onClick() end
                     elseif item.type == "slider" then
-                        -- los sliders se manejan con izquierda/derecha
+                        -- handled elsewhere
                     end
                 end
             elseif Menu.IsKeyJustPressed(0x25) then
@@ -490,7 +525,7 @@ function Menu.HandleInput()
 end
 
 -- ============================================
--- BUCLE DE NOCLIP (movimiento)
+-- BUCLE DE NOCLIP
 -- ============================================
 CreateThread(function()
     while true do
@@ -540,10 +575,10 @@ CreateThread(function()
 end)
 
 -- ============================================
--- INICIALIZACIÓN (con ApplyTheme ya definido)
+-- INICIALIZACIÓN
 -- ============================================
 CreateThread(function()
-    Menu.ApplyTheme("Lime")   -- <--- Ahora sí existe
+    Menu.ApplyTheme("Lime")
     Menu.LoadingStartTime = GetGameTimer() or 0
     while Menu.IsLoading do
         local elapsed = (GetGameTimer() or 0) - Menu.LoadingStartTime
