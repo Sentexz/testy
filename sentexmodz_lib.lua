@@ -1,5 +1,5 @@
 -- ============================================================
--- SENTEXMODZ LIBRARY v6.2 - DISEÑO RICOMENU (corregido)
+-- SENTEXMODZ LIBRARY v7.0 - DISEÑO RICOMENU (coordenadas absolutas)
 -- Con selector de tecla, banner y dibujo estable
 -- ============================================================
 
@@ -17,36 +17,23 @@ Menu.LoadingProgress = 0
 Menu.LoadingStartTime = nil
 Menu.LoadingDuration = 3000
 
--- Banner
-Menu.Banner = {
-    enabled = true,
-    imageUrl = "https://i.imgur.com/JV6Drrz.png",
-    height = 100
-}
-Menu.bannerTexture = nil
-
--- Configuración visual (basada en tema "infamous" de RicoMenu)
+-- Configuración visual (en píxeles, asumiendo 1920x1080)
 Menu.Style = {
-    menuX = 0.025,          -- posición X (esquina izquierda)
-    menuY = 0.025,          -- posición Y (esquina superior)
-    menuWidth = 0.23,       -- ancho
-    maxOptions = 13,        -- máx. opciones visibles
-    titleHeight = 0.15,     -- altura del título
-    titleXOffset = 0.5,     -- centrado
-    titleYOffset = 0.05,
-    buttonHeight = 0.045,
-    buttonScale = 0.380,
-    buttonTextXOffset = 0.010,
-    buttonTextYOffset = 0.010,
+    menuX = 50,             -- coordenada X en píxeles
+    menuY = 100,            -- coordenada Y en píxeles
+    menuWidth = 360,        -- ancho en píxeles
+    bannerHeight = 100,     -- alto del banner
+    titleHeight = 30,       -- alto del título
+    buttonHeight = 34,      -- alto de cada botón
+    maxOptions = 12,        -- máx. opciones visibles
     titleFont = 4,
     titleColor = { r = 240, g = 240, b = 240, a = 255 },
-    titleBackgroundColor = { r = 61, g = 248, b = 249, a = 255 },
-    menuBackgroundColor = { r = 38, g = 38, b = 38, a = 180 },  -- más opaco
-    menuFocusBackgroundColor = { r = 61, g = 248, b = 249, a = 255 },
-    menuTextColor = { r = 255, g = 255, b = 255, a = 255 },
-    menuSubTextColor = { r = 240, g = 240, b = 240, a = 255 },
-    menuFocusTextColor = { r = 0, g = 0, b = 0, a = 255 },
-    subTitleBackgroundColor = { r = 38, g = 38, b = 38, a = 255 },
+    titleBgColor = { r = 61, g = 248, b = 249, a = 255 },
+    menuBgColor = { r = 38, g = 38, b = 38, a = 200 },
+    menuFocusBgColor = { r = 61, g = 248, b = 249, a = 255 },
+    textColor = { r = 255, g = 255, b = 255, a = 255 },
+    focusTextColor = { r = 0, g = 0, b = 0, a = 255 },
+    subTitleBgColor = { r = 38, g = 38, b = 38, a = 255 }
 }
 
 -- Teclas de navegación
@@ -79,7 +66,7 @@ Menu.KeyNames = {
 }
 function Menu.GetKeyName(code) return Menu.KeyNames[code] or ("0x"..string.format("%02X", code)) end
 
--- Estructura del menú principal (categorías)
+-- Estructura del menú principal
 Menu.Structure = {
     { name = "Online Options", submenu = "player" },
     { name = "Self Options", submenu = "self" },
@@ -95,7 +82,7 @@ Menu.Structure = {
     { name = "Exit Menu", action = "exit" }
 }
 
--- Submenús (vacíos, se llenan desde el executor)
+-- Submenús (vacíos)
 Menu.Submenus = {
     player = { title = "Online Options", items = {} },
     self = { title = "Self Options", items = {} },
@@ -111,107 +98,72 @@ Menu.Submenus = {
 }
 
 -- ============================================================
--- FUNCIONES DE DIBUJO (usando DrawRect nativo para fiabilidad)
+-- FUNCIONES DE DIBUJO (coordenadas absolutas)
 -- ============================================================
 function Menu.DrawRect(x, y, w, h, r, g, b, a)
     DrawRect(x + w/2, y + h/2, w, h, r, g, b, a)
 end
 
-function Menu.DrawText(x, y, text, font, scale, r, g, b, a, center, rightJustify)
+function Menu.DrawText(x, y, text, font, scale, r, g, b, a, center)
     SetTextFont(font)
     SetTextScale(scale, scale)
     SetTextColour(r, g, b, a)
     SetTextCentre(center or false)
-    if rightJustify then
-        SetTextWrap(x - 0.01, x + Menu.Style.menuWidth)
-        SetTextRightJustify(true)
-    end
     BeginTextCommandDisplayText("STRING")
     AddTextComponentString(text)
     EndTextCommandDisplayText(x, y)
-end
-
--- Cargar banner
-function Menu.LoadBannerTexture(url)
-    if not url or not Susano or not Susano.HttpGet or not Susano.LoadTextureFromBuffer then return end
-    CreateThread(function()
-        local status, body = Susano.HttpGet(url)
-        if status == 200 and body and #body > 0 then
-            local tex = Susano.LoadTextureFromBuffer(body)
-            if tex then Menu.bannerTexture = tex end
-        end
-    end)
 end
 
 function Menu.DrawHeader()
     local x = Menu.Style.menuX
     local y = Menu.Style.menuY
     local w = Menu.Style.menuWidth
-    local h = Menu.Banner.height / 1080.0  -- convertir a coordenadas relativas (1080p)
-    if Menu.Banner.enabled and Menu.bannerTexture and Susano.DrawImage then
-        Susano.DrawImage(Menu.bannerTexture, x, y, w, h, 1,1,1,1,0)
-    else
-        Menu.DrawRect(x, y, w, h, Menu.Style.titleBackgroundColor.r, Menu.Style.titleBackgroundColor.g, Menu.Style.titleBackgroundColor.b, 255)
-        Menu.DrawText(x + w/2, y + h/2 - 0.02, "SENTEXMODZ", Menu.Style.titleFont, Menu.Style.buttonScale, 255,255,255,255, true)
-    end
+    local h = Menu.Style.bannerHeight
+    Menu.DrawRect(x, y, w, h, Menu.Style.titleBgColor.r, Menu.Style.titleBgColor.g, Menu.Style.titleBgColor.b, 255)
+    Menu.DrawText(x + w/2, y + h/2 - 10, "SENTEXMODZ", Menu.Style.titleFont, 0.8, 255,255,255,255, true)
 end
 
 function Menu.DrawTitle()
-    local x = Menu.Style.menuX + Menu.Style.menuWidth / 2
-    local xText = Menu.Style.menuX + Menu.Style.menuWidth * Menu.Style.titleXOffset
-    local headerH = Menu.Banner.height / 1080.0
-    local y = Menu.Style.menuY + headerH + Menu.Style.titleHeight / 2
+    local x = Menu.Style.menuX
+    local y = Menu.Style.menuY + Menu.Style.bannerHeight
+    local w = Menu.Style.menuWidth
+    local h = Menu.Style.titleHeight
     local title = (Menu.CurrentSubmenu and Menu.Submenus[Menu.CurrentSubmenu].title) or "SENTEXMODZ"
-    Menu.DrawRect(Menu.Style.menuX, y - Menu.Style.titleHeight/2, Menu.Style.menuWidth, Menu.Style.titleHeight,
-        Menu.Style.titleBackgroundColor.r, Menu.Style.titleBackgroundColor.g, Menu.Style.titleBackgroundColor.b, Menu.Style.titleBackgroundColor.a)
-    Menu.DrawText(xText, y - Menu.Style.titleHeight/2 + Menu.Style.titleYOffset, title, Menu.Style.titleFont, Menu.Style.buttonScale,
-        Menu.Style.titleColor.r, Menu.Style.titleColor.g, Menu.Style.titleColor.b, Menu.Style.titleColor.a, true)
+    Menu.DrawRect(x, y, w, h, Menu.Style.titleBgColor.r, Menu.Style.titleBgColor.g, Menu.Style.titleBgColor.b, 255)
+    Menu.DrawText(x + w/2, y + h/2 - 8, title, Menu.Style.titleFont, 0.5, Menu.Style.titleColor.r, Menu.Style.titleColor.g, Menu.Style.titleColor.b, 255, true)
 end
 
 function Menu.DrawSubTitle()
-    local x = Menu.Style.menuX + Menu.Style.menuWidth / 2
-    local headerH = Menu.Banner.height / 1080.0
-    local y = Menu.Style.menuY + headerH + Menu.Style.titleHeight + Menu.Style.buttonHeight / 2
-    local subTitle = Menu.CurrentSubmenu and (Menu.CurrentSubmenu:upper() .. " OPTIONS") or "MAIN MENU"
-    Menu.DrawRect(x, y, Menu.Style.menuWidth, Menu.Style.buttonHeight,
-        Menu.Style.subTitleBackgroundColor.r, Menu.Style.subTitleBackgroundColor.g, Menu.Style.subTitleBackgroundColor.b, Menu.Style.subTitleBackgroundColor.a)
-    Menu.DrawText(Menu.Style.menuX + Menu.Style.buttonTextXOffset, y - Menu.Style.buttonHeight/2 + Menu.Style.buttonTextYOffset,
-        subTitle, 0, Menu.Style.buttonScale, 255, 255, 255, 255, false)
+    local x = Menu.Style.menuX
+    local y = Menu.Style.menuY + Menu.Style.bannerHeight + Menu.Style.titleHeight
+    local w = Menu.Style.menuWidth
+    local h = Menu.Style.buttonHeight
+    local subTitle = Menu.CurrentSubmenu and (string.upper(Menu.CurrentSubmenu) .. " OPTIONS") or "MAIN MENU"
+    Menu.DrawRect(x, y, w, h, Menu.Style.subTitleBgColor.r, Menu.Style.subTitleBgColor.g, Menu.Style.subTitleBgColor.b, 255)
+    Menu.DrawText(x + 10, y + h/2 - 8, subTitle, 0, 0.4, 255,255,255,255, false)
     if Menu.OptionCount > Menu.Style.maxOptions then
         local posText = tostring(Menu.CurrentOption) .. " / " .. tostring(Menu.OptionCount)
-        Menu.DrawText(Menu.Style.menuX + Menu.Style.menuWidth - 0.02, y - Menu.Style.buttonHeight/2 + Menu.Style.buttonTextYOffset,
-            posText, 0, Menu.Style.buttonScale, 200, 200, 200, 255, false, true)
+        Menu.DrawText(x + w - 50, y + h/2 - 8, posText, 0, 0.4, 200,200,200,255, false)
     end
 end
 
-function Menu.DrawButton(text, subText, isCurrent)
-    local x = Menu.Style.menuX + Menu.Style.menuWidth / 2
-    local multiplier = nil
-    if Menu.CurrentOption <= Menu.Style.maxOptions and Menu.OptionCount <= Menu.Style.maxOptions then
-        multiplier = Menu.OptionCount
-    elseif Menu.OptionCount > Menu.CurrentOption - Menu.Style.maxOptions and Menu.OptionCount <= Menu.CurrentOption then
-        multiplier = Menu.OptionCount - (Menu.CurrentOption - Menu.Style.maxOptions)
+function Menu.DrawButton(text, subText, isCurrent, index)
+    local x = Menu.Style.menuX
+    local y = Menu.Style.menuY + Menu.Style.bannerHeight + Menu.Style.titleHeight + Menu.Style.buttonHeight + (index-1) * Menu.Style.buttonHeight
+    local w = Menu.Style.menuWidth
+    local h = Menu.Style.buttonHeight
+    local bgColor, textColor
+    if isCurrent then
+        bgColor = Menu.Style.menuFocusBgColor
+        textColor = Menu.Style.focusTextColor
+    else
+        bgColor = Menu.Style.menuBgColor
+        textColor = Menu.Style.textColor
     end
-    if multiplier then
-        local headerH = Menu.Banner.height / 1080.0
-        local y = Menu.Style.menuY + headerH + Menu.Style.titleHeight + Menu.Style.buttonHeight + (Menu.Style.buttonHeight * multiplier) - Menu.Style.buttonHeight/2
-        local bgColor, textColor, subTextColor
-        if isCurrent then
-            bgColor = Menu.Style.menuFocusBackgroundColor
-            textColor = Menu.Style.menuFocusTextColor
-            subTextColor = Menu.Style.menuFocusTextColor
-        else
-            bgColor = Menu.Style.menuBackgroundColor
-            textColor = Menu.Style.menuTextColor
-            subTextColor = Menu.Style.menuSubTextColor
-        end
-        Menu.DrawRect(x, y, Menu.Style.menuWidth, Menu.Style.buttonHeight, bgColor.r, bgColor.g, bgColor.b, bgColor.a)
-        Menu.DrawText(Menu.Style.menuX + Menu.Style.buttonTextXOffset, y - Menu.Style.buttonHeight/2 + Menu.Style.buttonTextYOffset,
-            text, 0, Menu.Style.buttonScale, textColor.r, textColor.g, textColor.b, textColor.a, false, false)
-        if subText then
-            Menu.DrawText(Menu.Style.menuX + Menu.Style.menuWidth - Menu.Style.buttonTextXOffset, y - Menu.Style.buttonHeight/2 + Menu.Style.buttonTextYOffset,
-                subText, 0, Menu.Style.buttonScale, subTextColor.r, subTextColor.g, subTextColor.b, subTextColor.a, false, true)
-        end
+    Menu.DrawRect(x, y, w, h, bgColor.r, bgColor.g, bgColor.b, bgColor.a)
+    Menu.DrawText(x + 10, y + h/2 - 8, text, 0, 0.4, textColor.r, textColor.g, textColor.b, 255, false)
+    if subText then
+        Menu.DrawText(x + w - 10, y + h/2 - 8, subText, 0, 0.35, textColor.r, textColor.g, textColor.b, 255, true)
     end
 end
 
@@ -224,12 +176,18 @@ function Menu.Draw()
     Menu.OptionCount = 0
     local items = Menu.CurrentSubmenu and Menu.Submenus[Menu.CurrentSubmenu].items or Menu.Structure
     if not items or #items == 0 then return end
-    local startIdx = math.max(1, Menu.CurrentOption - Menu.Style.maxOptions)
-    local endIdx = math.min(#items, startIdx + Menu.Style.maxOptions - 1)
+    -- Calcular rango visible
+    local maxVisible = Menu.Style.maxOptions
+    local startIdx = math.max(1, Menu.CurrentOption - math.floor(maxVisible/2))
+    local endIdx = math.min(#items, startIdx + maxVisible - 1)
+    if endIdx - startIdx + 1 < maxVisible then
+        startIdx = math.max(1, endIdx - maxVisible + 1)
+    end
     Menu.OptionCount = #items
     Menu.DrawHeader()
     Menu.DrawTitle()
     Menu.DrawSubTitle()
+    local visibleIndex = 1
     for i = startIdx, endIdx do
         local item = items[i]
         local isCurrent = (i == Menu.CurrentOption)
@@ -239,12 +197,13 @@ function Menu.Draw()
         elseif item.type == "slider" then
             subText = tostring(item.value)
         end
-        Menu.DrawButton(item.name, subText, isCurrent)
+        Menu.DrawButton(item.name, subText, isCurrent, visibleIndex)
+        visibleIndex = visibleIndex + 1
     end
 end
 
 -- ============================================================
--- SELECTOR DE TECLA
+-- SELECTOR DE TECLA (coordenadas absolutas)
 -- ============================================================
 local quickKeys = {
     { code = 0x60, name = "Numpad 0" },
@@ -255,29 +214,29 @@ local selectedQuick = 1
 
 function Menu.DrawKeySelector()
     local sw, sh = GetActiveScreenResolution()
-    local w, h = 500/sw, 280/sh  -- coordenadas relativas
-    local x, y = (1-w)/2, (1-h)/2
+    local w, h = 500, 280
+    local x, y = (sw-w)/2, (sh-h)/2
     Menu.DrawRect(x, y, w, h, 0,0,0, 200)
-    Menu.DrawRect(x, y, w, 0.01, Menu.Style.titleBackgroundColor.r, Menu.Style.titleBackgroundColor.g, Menu.Style.titleBackgroundColor.b, 255)
-    Menu.DrawText(x+w/2, y+0.05, "🔑 SELECCIONA TECLA DE APERTURA", Menu.Style.titleFont, 0.5, Menu.Style.titleBackgroundColor.r, Menu.Style.titleBackgroundColor.g, Menu.Style.titleBackgroundColor.b, 255, true)
-    Menu.DrawText(x+w/2, y+0.1, "Presiona cualquier tecla o elige una rápida:", 0, 0.35, 220,220,220, 200, true)
-    local btnW = 0.12
-    local btnH = 0.05
-    local startX = x + w/2 - (btnW * 3)/2 - 0.01
+    Menu.DrawRect(x, y, w, 4, Menu.Style.titleBgColor.r, Menu.Style.titleBgColor.g, Menu.Style.titleBgColor.b, 255)
+    Menu.DrawText(x+w/2, y+35, "🔑 SELECCIONA TECLA DE APERTURA", Menu.Style.titleFont, 0.5, Menu.Style.titleBgColor.r, Menu.Style.titleBgColor.g, Menu.Style.titleBgColor.b, 255, true)
+    Menu.DrawText(x+w/2, y+75, "Presiona cualquier tecla o elige una rápida:", 0, 0.35, 220,220,220, 200, true)
+    local btnW = 100
+    local btnH = 40
+    local startX = x + w/2 - (btnW * 3)/2 - 10
     for i, key in ipairs(quickKeys) do
-        local btnX = startX + (i-1)*(btnW+0.01)
+        local btnX = startX + (i-1)*(btnW+10)
         local isHover = (i == selectedQuick)
-        local col = isHover and { Menu.Style.titleBackgroundColor.r, Menu.Style.titleBackgroundColor.g, Menu.Style.titleBackgroundColor.b } or {40,40,40}
-        Menu.DrawRect(btnX, y+0.15, btnW, btnH, col[1], col[2], col[3], 255)
-        Menu.DrawText(btnX+btnW/2, y+0.15+btnH/2-0.01, key.name, 0, 0.35, 255,255,255, 255, true)
+        local col = isHover and { Menu.Style.titleBgColor.r, Menu.Style.titleBgColor.g, Menu.Style.titleBgColor.b } or {40,40,40}
+        Menu.DrawRect(btnX, y+110, btnW, btnH, col[1], col[2], col[3], 255)
+        Menu.DrawText(btnX+btnW/2, y+110+btnH/2-7, key.name, 0, 0.35, 255,255,255, 255, true)
     end
     if Menu.SelectedKeyName then
-        Menu.DrawRect(x+w/2-0.1, y+0.22, 0.2, 0.06, Menu.Style.titleBackgroundColor.r, Menu.Style.titleBackgroundColor.g, Menu.Style.titleBackgroundColor.b, 200)
-        Menu.DrawText(x+w/2, y+0.25, Menu.SelectedKeyName, 0, 0.45, 0,0,0, 255, true)
-        Menu.DrawText(x+w/2, y+0.3, "▶ Presiona ENTER para guardar", 0, 0.3, 200,200,200, 180, true)
+        Menu.DrawRect(x+w/2-80, y+170, 160, 50, Menu.Style.titleBgColor.r, Menu.Style.titleBgColor.g, Menu.Style.titleBgColor.b, 200)
+        Menu.DrawText(x+w/2, y+195, Menu.SelectedKeyName, 0, 0.45, 0,0,0, 255, true)
+        Menu.DrawText(x+w/2, y+240, "▶ Presiona ENTER para guardar", 0, 0.3, 200,200,200, 180, true)
     else
         local pulse = 0.7 + math.sin(GetGameTimer()/200)*0.3
-        Menu.DrawText(x+w/2, y+0.27, "⌨️ Esperando tecla... ⌨️", 0, 0.35, 200*pulse,200*pulse,200*pulse, 200, true)
+        Menu.DrawText(x+w/2, y+200, "⌨️ Esperando tecla... ⌨️", 0, 0.35, 200*pulse,200*pulse,200*pulse, 200, true)
     end
 end
 
@@ -402,10 +361,6 @@ function Menu.Render()
 end
 
 function Menu.Start(actionHandler)
-    if Menu.Banner.enabled and Menu.Banner.imageUrl then
-        Menu.LoadBannerTexture(Menu.Banner.imageUrl)
-    end
-
     CreateThread(function()
         Menu.LoadingStartTime = GetGameTimer()
         while Menu.IsLoading do
