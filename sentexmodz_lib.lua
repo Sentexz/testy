@@ -1,6 +1,6 @@
 -- ============================================================
--- SENTEXMODZ LIBRARY v7.0 - DISEÑO RICOMENU (coordenadas absolutas)
--- Con selector de tecla, banner y dibujo estable
+-- SENTEXMODZ LIBRARY v8.0 - DISEÑO RICOMENU (nativo, sin Susano)
+-- Selector de tecla, banner, dibujo con funciones nativas
 -- ============================================================
 
 local Menu = {}
@@ -11,21 +11,18 @@ Menu.OptionCount = 0
 Menu.SelectingKey = false
 Menu.SelectedKey = nil
 Menu.SelectedKeyName = nil
-Menu.LoadingComplete = false
-Menu.IsLoading = true
-Menu.LoadingProgress = 0
-Menu.LoadingStartTime = nil
-Menu.LoadingDuration = 3000
+Menu.LoadingComplete = true   -- ya no hay carga
+Menu.IsLoading = false
 
 -- Configuración visual (en píxeles, asumiendo 1920x1080)
 Menu.Style = {
-    menuX = 50,             -- coordenada X en píxeles
-    menuY = 100,            -- coordenada Y en píxeles
-    menuWidth = 360,        -- ancho en píxeles
-    bannerHeight = 100,     -- alto del banner
-    titleHeight = 30,       -- alto del título
-    buttonHeight = 34,      -- alto de cada botón
-    maxOptions = 12,        -- máx. opciones visibles
+    menuX = 50,
+    menuY = 100,
+    menuWidth = 360,
+    bannerHeight = 100,
+    titleHeight = 30,
+    buttonHeight = 34,
+    maxOptions = 12,
     titleFont = 4,
     titleColor = { r = 240, g = 240, b = 240, a = 255 },
     titleBgColor = { r = 61, g = 248, b = 249, a = 255 },
@@ -36,12 +33,12 @@ Menu.Style = {
     subTitleBgColor = { r = 38, g = 38, b = 38, a = 255 }
 }
 
--- Teclas de navegación
+-- Teclas de navegación (códigos nativos de FiveM)
 Menu.Keys = {
     up = 172, down = 173, left = 174, right = 175, select = 191, back = 202
 }
 
--- Mapeo de teclas
+-- Mapeo de teclas para el selector
 Menu.KeyNames = {
     [0x08] = "Backspace", [0x09] = "Tab", [0x0D] = "Enter", [0x10] = "Shift",
     [0x11] = "Ctrl", [0x12] = "Alt", [0x1B] = "ESC", [0x20] = "Space",
@@ -82,7 +79,7 @@ Menu.Structure = {
     { name = "Exit Menu", action = "exit" }
 }
 
--- Submenús (vacíos)
+-- Submenús (vacíos inicialmente)
 Menu.Submenus = {
     player = { title = "Online Options", items = {} },
     self = { title = "Self Options", items = {} },
@@ -98,7 +95,7 @@ Menu.Submenus = {
 }
 
 -- ============================================================
--- FUNCIONES DE DIBUJO (coordenadas absolutas)
+-- FUNCIONES DE DIBUJO (nativas FiveM)
 -- ============================================================
 function Menu.DrawRect(x, y, w, h, r, g, b, a)
     DrawRect(x + w/2, y + h/2, w, h, r, g, b, a)
@@ -176,7 +173,6 @@ function Menu.Draw()
     Menu.OptionCount = 0
     local items = Menu.CurrentSubmenu and Menu.Submenus[Menu.CurrentSubmenu].items or Menu.Structure
     if not items or #items == 0 then return end
-    -- Calcular rango visible
     local maxVisible = Menu.Style.maxOptions
     local startIdx = math.max(1, Menu.CurrentOption - math.floor(maxVisible/2))
     local endIdx = math.min(#items, startIdx + maxVisible - 1)
@@ -203,7 +199,7 @@ function Menu.Draw()
 end
 
 -- ============================================================
--- SELECTOR DE TECLA (coordenadas absolutas)
+-- SELECTOR DE TECLA
 -- ============================================================
 local quickKeys = {
     { code = 0x60, name = "Numpad 0" },
@@ -241,17 +237,11 @@ function Menu.DrawKeySelector()
 end
 
 -- ============================================================
--- MANEJO DE TECLAS
+-- MANEJO DE TECLAS (usando IsControlJustPressed)
 -- ============================================================
 Menu.KeyStates = {}
 function Menu.IsKeyJustPressed(key)
-    if not Susano or not Susano.GetAsyncKeyState then
-        return IsControlJustPressed(1, key)
-    end
-    local down, pressed = Susano.GetAsyncKeyState(key)
-    local was = Menu.KeyStates[key] or false
-    Menu.KeyStates[key] = down
-    return pressed or (down and not was)
+    return IsControlJustPressed(1, key)
 end
 
 function Menu.HandleInput(actionHandler)
@@ -264,6 +254,8 @@ function Menu.HandleInput(actionHandler)
                 Menu.Visible = false
                 if Susano and Susano.ShowNotification then
                     Susano.ShowNotification("~g~Tecla guardada: "..Menu.SelectedKeyName, 2000)
+                else
+                    print("Tecla guardada: "..Menu.SelectedKeyName)
                 end
             else
                 local key = quickKeys[selectedQuick]
@@ -273,6 +265,8 @@ function Menu.HandleInput(actionHandler)
                 Menu.Visible = false
                 if Susano and Susano.ShowNotification then
                     Susano.ShowNotification("~g~Tecla rápida guardada: "..key.name, 2000)
+                else
+                    print("Tecla guardada: "..key.name)
                 end
             end
             return
@@ -351,38 +345,21 @@ function Menu.HandleInput(actionHandler)
 end
 
 -- ============================================================
--- RENDER Y CICLO PRINCIPAL
+-- BUCLE PRINCIPAL
 -- ============================================================
 function Menu.Render()
-    if not Susano or not Susano.BeginFrame then return end
-    Susano.BeginFrame()
     Menu.Draw()
-    Susano.SubmitFrame()
 end
 
 function Menu.Start(actionHandler)
-    CreateThread(function()
-        Menu.LoadingStartTime = GetGameTimer()
-        while Menu.IsLoading do
-            local elapsed = GetGameTimer() - Menu.LoadingStartTime
-            Menu.LoadingProgress = math.min(100, (elapsed / 3000) * 100)
-            if elapsed >= 3000 then
-                Menu.IsLoading = false
-                Menu.LoadingComplete = true
-                Menu.SelectingKey = true
-                break
-            end
-            Wait(0)
-        end
-    end)
-
-    CreateThread(function()
+    -- Mostrar selector de tecla inmediatamente
+    Menu.SelectingKey = true
+    -- Bucle principal
+    Citizen.CreateThread(function()
         while true do
             Menu.Render()
-            if Menu.LoadingComplete then
-                Menu.HandleInput(actionHandler)
-            end
-            Wait(0)
+            Menu.HandleInput(actionHandler)
+            Citizen.Wait(0)
         end
     end)
 end
