@@ -1,6 +1,5 @@
 -- ============================================================
--- SENTEXMODZ LIBRARY v5.1 - CORREGIDA (fondo negro opaco + selección)
--- SOLO CAMBIOS: alpha fondos a 255 y selección con fondo completo
+-- SENTEXMODZ LIBRARY v5.2 - CORREGIDA (fondo opaco + selección)
 -- ============================================================
 
 local Menu = {}
@@ -34,7 +33,7 @@ Menu.Colors = {
     FooterBlack = { r = 0, g = 0, b = 0 }
 }
 
--- Banner
+-- Banner (igual que original)
 Menu.Banner = {
     enabled = true,
     imageUrl = "https://i.imgur.com/JV6Drrz.png",
@@ -57,7 +56,7 @@ Menu.Position = { x = 50, y = 100, width = 360, itemHeight = 34, mainMenuHeight 
     footerRadius = 4, itemRadius = 4, scrollbarWidth = 12, scrollbarPadding = 3, headerRadius = 6 }
 Menu.Scale = 1.0
 
--- Mapeo de teclas
+-- Mapeo de teclas (igual)
 Menu.KeyNames = {
     [0x08] = "Backspace", [0x09] = "Tab", [0x0D] = "Enter", [0x10] = "Shift",
     [0x11] = "Ctrl", [0x12] = "Alt", [0x1B] = "ESC", [0x20] = "Space",
@@ -82,7 +81,7 @@ Menu.KeyNames = {
 }
 function Menu.GetKeyName(code) return Menu.KeyNames[code] or ("0x"..string.format("%02X", code)) end
 
--- Funciones de dibujo (usando Susano, como original)
+-- Funciones de dibujo (usando Susano)
 function Menu.DrawRect(x,y,w,h,r,g,b,a)
     if Susano and Susano.DrawFilledRect then
         Susano.DrawFilledRect(x,y,w,h,r/255,g/255,b/255,a/255)
@@ -111,7 +110,7 @@ function Menu.DrawRoundedRect(x,y,w,h,r,g,b,a,radius)
     end
 end
 
--- Cargar banner
+-- Cargar banner (igual que original)
 function Menu.LoadBannerTexture(url)
     if not url or not Susano or not Susano.HttpGet or not Susano.LoadTextureFromBuffer then return end
     CreateThread(function()
@@ -133,7 +132,7 @@ function Menu.ApplyTheme(themeName)
 end
 
 -- ============================================================
--- FUNCIONES BASE (Godmode, Heal, etc.) - IGUAL
+-- FUNCIONES BASE (Godmode, Heal, etc.) - SIN CAMBIOS
 -- ============================================================
 local function ToggleGodmode()
     Menu.godmodeActive = not Menu.godmodeActive
@@ -224,7 +223,7 @@ local function ChangeWeather()
 end
 
 -- ============================================================
--- FUNCIONES ONLINE
+-- FUNCIONES ONLINE (Jugadores y Vehículos) - IGUAL
 -- ============================================================
 local function UpdatePlayerList()
     Menu.playerList = {}
@@ -534,7 +533,7 @@ Menu.Categories = {
     } }
 }
 
--- Construcción dinámica de jugadores
+-- Construcción dinámica de jugadores (igual)
 local function BuildPlayersMenu()
     local tab = Menu.Categories[5].tabs[1]
     tab.items = {}
@@ -671,7 +670,7 @@ function Menu.DrawCategories()
         totalHeight = sp.headerHeight + sp.mainMenuHeight + sp.mainMenuSpacing + visibleCats * sp.itemHeight + sp.footerSpacing + sp.footerHeight
     end
     local bgY = sp.y + totalHeight/2
-    -- Fondo NEGRO OPACO (cambiado de 100 a 255)
+    -- Fondo negro OPACO (alpha 255 en lugar de 100)
     Menu.DrawRect(sp.x, bgY, sp.width-1, totalHeight, 0,0,0, 255)
 
     if Menu.OpenedCategory then
@@ -693,7 +692,7 @@ function Menu.DrawCategories()
             for i, item in ipairs(currentTab.items) do
                 local y = itemY + (i-1)*sp.itemHeight
                 local isSel = (i == Menu.CurrentItem)
-                -- Item seleccionado: fondo completo verde lima; no seleccionado: gris opaco
+                -- Item seleccionado: fondo completo verde lima; no seleccionado: gris oscuro opaco
                 if isSel then
                     Menu.DrawRect(x, y, w, sp.itemHeight, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255)
                 else
@@ -725,7 +724,7 @@ function Menu.DrawCategories()
         for i, cat in ipairs(categories) do
             local y = startY + (i-1)*itemH
             local isSel = (i+1 == Menu.CurrentCategory)
-            -- Categoría seleccionada: fondo verde lima completo
+            -- Categoría seleccionada: fondo completo verde lima
             if isSel then
                 Menu.DrawRect(x, y, w, itemH, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255)
             else
@@ -749,7 +748,7 @@ function Menu.DrawFooter()
 end
 
 -- ============================================================
--- SELECTOR DE TECLA
+-- SELECTOR DE TECLA (igual que original)
 -- ============================================================
 local quickKeys = {
     { code = 0x60, name = "Numpad 0" },
@@ -790,7 +789,7 @@ function Menu.DrawKeySelector(alpha)
 end
 
 -- ============================================================
--- MANEJO DE TECLAS Y NOCLIP
+-- MANEJO DE TECLAS Y NOCLIP (sin cambios)
 -- ============================================================
 Menu.KeyStates = {}
 function Menu.IsKeyJustPressed(key)
@@ -908,7 +907,7 @@ function Menu.HandleInput()
 end
 
 -- ============================================================
--- NOCLIP SIGILOSO
+-- NOCLIP SIGILOSO (igual)
 -- ============================================================
 local lastSyncTime = 0
 CreateThread(function()
