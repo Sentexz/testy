@@ -1,6 +1,5 @@
 -- ============================================================
--- SENTEXMODZ LIBRARY v5.1 - FONDO NEGRO SÓLIDO + SELECCIÓN VISIBLE
--- Arreglado: fondo opaco, selección destacada (verde lima)
+-- SENTEXMODZ LIBRARY v5.1 - FONDO NEGRO SÓLIDO + SELECCIÓN (FUNCIONAL)
 -- ============================================================
 
 local Menu = {}
@@ -25,14 +24,13 @@ Menu.LoadingStartTime = nil
 Menu.LoadingDuration = 3000
 Menu.CurrentTopTab = 1
 
--- Colores (verde lima para selección)
+-- Colores (verde lima)
 Menu.Colors = {
-    HeaderGreen = { r = 50, g = 205, b = 50 },      -- verde lima para cabecera
-    SelectedBg = { r = 50, g = 205, b = 50 },        -- fondo de ítem seleccionado
-    TextWhite = { r = 255, g = 255, b = 255 },       -- texto blanco
-    BackgroundDark = { r = 0, g = 0, b = 0 },        -- fondo negro sólido
-    FooterBlack = { r = 0, g = 0, b = 0 },           -- pie negro
-    UnselectedBg = { r = 30, g = 30, b = 30 }        -- fondo ítem no seleccionado
+    HeaderPink = { r = 50, g = 205, b = 50 },
+    SelectedBg = { r = 50, g = 205, b = 50 },
+    TextWhite = { r = 255, g = 255, b = 255 },
+    BackgroundDark = { r = 0, g = 0, b = 0 },
+    FooterBlack = { r = 0, g = 0, b = 0 }
 }
 
 -- Banner
@@ -58,7 +56,7 @@ Menu.Position = { x = 50, y = 100, width = 360, itemHeight = 34, mainMenuHeight 
     footerRadius = 4, itemRadius = 4, scrollbarWidth = 12, scrollbarPadding = 3, headerRadius = 6 }
 Menu.Scale = 1.0
 
--- Mapeo de teclas (igual que original)
+-- Mapeo de teclas
 Menu.KeyNames = {
     [0x08] = "Backspace", [0x09] = "Tab", [0x0D] = "Enter", [0x10] = "Shift",
     [0x11] = "Ctrl", [0x12] = "Alt", [0x1B] = "ESC", [0x20] = "Space",
@@ -83,27 +81,34 @@ Menu.KeyNames = {
 }
 function Menu.GetKeyName(code) return Menu.KeyNames[code] or ("0x"..string.format("%02X", code)) end
 
--- ============================================================
--- FUNCIONES DE DIBUJO MEJORADAS (fuerzan opacidad)
--- ============================================================
-function Menu.DrawRect(x, y, w, h, r, g, b, a)
-    -- Usamos siempre el DrawRect nativo de FiveM (más fiable)
-    DrawRect(x, y, w, h, r, g, b, a)
+-- Funciones de dibujo (usando Susano, como original)
+function Menu.DrawRect(x,y,w,h,r,g,b,a)
+    if Susano and Susano.DrawFilledRect then
+        Susano.DrawFilledRect(x,y,w,h,r/255,g/255,b/255,a/255)
+    else
+        -- Fallback nativo (por si acaso)
+        DrawRect(x,y,w,h,r,g,b,a)
+    end
 end
-
-function Menu.DrawText(x, y, text, size, r, g, b, a, center)
-    SetTextFont(0)
-    SetTextScale(size/50, size/50)
-    SetTextColour(r, g, b, a)
-    SetTextCentre(center or false)
-    SetTextEntry("STRING")
-    AddTextComponentString(text)
-    DrawText(x, y)
+function Menu.DrawText(x,y,text,size,r,g,b,a,center)
+    if Susano and Susano.DrawText then
+        Susano.DrawText(x,y,text,size,r/255,g/255,b/255,a/255)
+    else
+        SetTextFont(0)
+        SetTextScale(size/50,size/50)
+        SetTextColour(r,g,b,a)
+        SetTextCentre(center or false)
+        SetTextEntry("STRING")
+        AddTextComponentString(text)
+        DrawText(x,y)
+    end
 end
-
-function Menu.DrawRoundedRect(x, y, w, h, r, g, b, a, radius)
-    -- Versión simplificada sin redondeo (para evitar errores)
-    Menu.DrawRect(x, y, w, h, r, g, b, a)
+function Menu.DrawRoundedRect(x,y,w,h,r,g,b,a,radius)
+    if Susano and Susano.DrawRectFilled then
+        Susano.DrawRectFilled(x,y,w,h,r/255,g/255,b/255,a/255,radius)
+    else
+        Menu.DrawRect(x,y,w,h,r,g,b,a)
+    end
 end
 
 -- Cargar banner
@@ -120,7 +125,7 @@ end
 
 function Menu.ApplyTheme(themeName)
     Menu.CurrentTheme = "Lime"
-    Menu.Colors.HeaderGreen = { r = 50, g = 205, b = 50 }
+    Menu.Colors.HeaderPink = { r = 50, g = 205, b = 50 }
     Menu.Colors.SelectedBg = { r = 50, g = 205, b = 50 }
     if Menu.Banner.enabled and Menu.Banner.imageUrl then
         Menu.LoadBannerTexture(Menu.Banner.imageUrl)
@@ -128,7 +133,7 @@ function Menu.ApplyTheme(themeName)
 end
 
 -- ============================================================
--- FUNCIONES BASE (Godmode, Heal, etc.)
+-- FUNCIONES BASE (Godmode, Heal, etc.) - IGUAL QUE ORIGINAL
 -- ============================================================
 local function ToggleGodmode()
     Menu.godmodeActive = not Menu.godmodeActive
@@ -219,7 +224,7 @@ local function ChangeWeather()
 end
 
 -- ============================================================
--- FUNCIONES ONLINE (Jugadores y Vehículos)
+-- FUNCIONES ONLINE (Jugadores y Vehículos) - IGUAL
 -- ============================================================
 local function UpdatePlayerList()
     Menu.playerList = {}
@@ -622,7 +627,7 @@ CreateThread(function()
 end)
 
 -- ============================================================
--- DIBUJO DEL MENÚ (con fondo negro sólido y selección visible)
+-- DIBUJO DEL MENÚ (FONDO NEGRO SÓLIDO + SELECCIÓN DESTACADA)
 -- ============================================================
 function Menu.GetScaledPosition()
     local s = Menu.Scale
@@ -642,20 +647,8 @@ function Menu.DrawHeader()
     if Menu.Banner.enabled and Menu.bannerTexture and Susano.DrawImage then
         Susano.DrawImage(Menu.bannerTexture, x, y, w, h, 1,1,1,1,0)
     else
-        -- Cabecera verde lima
-        Menu.DrawRect(x + w/2, y + h/2, w, h, Menu.Colors.HeaderGreen.r, Menu.Colors.HeaderGreen.g, Menu.Colors.HeaderGreen.b, 255)
+        Menu.DrawRect(x, y, w, h, Menu.Colors.HeaderPink.r, Menu.Colors.HeaderPink.g, Menu.Colors.HeaderPink.b, 255)
     end
-end
-
-function Menu.DrawFooter()
-    local sp = Menu.GetScaledPosition()
-    local totalH = sp.headerHeight + sp.mainMenuHeight + sp.mainMenuSpacing + (#Menu.Categories-1)*sp.itemHeight + sp.footerSpacing
-    local y = sp.y + totalH
-    local h = sp.footerHeight
-    Menu.DrawRect(sp.x + (sp.width-1)/2, y + h/2, sp.width-1, h, 0,0,0, 255)
-    Menu.DrawText(sp.x+10, y + h/2 - 8, "SENTEXMODZ .gg/discord", 13, 150,150,150,255)
-    local pos = string.format("%d/%d", Menu.CurrentCategory-1, #Menu.Categories-1)
-    Menu.DrawText(sp.x+sp.width-50, y + h/2 - 8, pos, 13, 150,150,150,255)
 end
 
 function Menu.DrawCategories()
@@ -678,25 +671,21 @@ function Menu.DrawCategories()
         totalHeight = sp.headerHeight + sp.mainMenuHeight + sp.mainMenuSpacing + visibleCats * sp.itemHeight + sp.footerSpacing + sp.footerHeight
     end
     local bgY = sp.y + totalHeight/2
-    -- Fondo NEGRO SÓLIDO (opaco)
-    Menu.DrawRect(sp.x + (sp.width-1)/2, bgY, sp.width-1, totalHeight, 0,0,0, 255)
+    -- FONDO NEGRO SÓLIDO (alpha = 255)
+    Menu.DrawRect(sp.x, bgY, sp.width-1, totalHeight, 0,0,0, 255)
 
+    -- Resto de dibujo (ídem original pero con selección destacada)
     if Menu.OpenedCategory then
         local cat = Menu.Categories[Menu.OpenedCategory]
         if not cat or not cat.hasTabs then return end
         local x, startY = sp.x, sp.y + sp.headerHeight
-        local w, tabH = sp.width-1, sp.mainMenuHeight
+        local w, tabH = sp.width, sp.mainMenuHeight
         local tabs = cat.tabs
         local tabW = w / #tabs
-        -- Dibujar pestañas
         for i, tab in ipairs(tabs) do
             local tx = x + (i-1)*tabW
             local isSel = (i == Menu.CurrentTab)
-            Menu.DrawRect(tx + tabW/2, startY + tabH/2, tabW, tabH, 
-                isSel and Menu.Colors.SelectedBg.r or 20, 
-                isSel and Menu.Colors.SelectedBg.g or 20, 
-                isSel and Menu.Colors.SelectedBg.b or 20, 
-                isSel and 255 or 100)
+            Menu.DrawRect(tx, startY, tabW, tabH, isSel and Menu.Colors.SelectedBg.r or 20, isSel and Menu.Colors.SelectedBg.g or 20, isSel and Menu.Colors.SelectedBg.b or 20, isSel and 255 or 100)
             Menu.DrawText(tx+tabW/2, startY+tabH/2-8, tab.name, 16, 255,255,255,255, true)
         end
         local currentTab = tabs[Menu.CurrentTab]
@@ -705,52 +694,42 @@ function Menu.DrawCategories()
             for i, item in ipairs(currentTab.items) do
                 local y = itemY + (i-1)*sp.itemHeight
                 local isSel = (i == Menu.CurrentItem)
-                -- Fondo del item
+                -- Fondo del item: seleccionado = verde lima, no seleccionado = gris oscuro
                 if isSel then
-                    -- Item seleccionado: fondo verde lima (más llamativo)
-                    Menu.DrawRect(x + w/2, y + sp.itemHeight/2, w, sp.itemHeight, 
-                        Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255)
+                    Menu.DrawRect(x, y, w, sp.itemHeight, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255)
                 else
-                    -- Item no seleccionado: gris oscuro casi negro
-                    Menu.DrawRect(x + w/2, y + sp.itemHeight/2, w, sp.itemHeight, 30,30,30, 255)
+                    Menu.DrawRect(x, y, w, sp.itemHeight, 30,30,30, 255)
                 end
-                -- Texto del item
                 Menu.DrawText(x+10, y+sp.itemHeight/2-8, item.name, 16, 255,255,255,255)
-                -- Dibujar toggle o slider si aplica
                 if item.type == "toggle" then
                     local tw, th = 36, 16
                     local tx = x + w - tw - 10
                     local ty = y + sp.itemHeight/2 - th/2
-                    Menu.DrawRect(tx+tw/2, ty+th/2, tw, th, 100,100,100, 150)
-                    if item.value then 
-                        Menu.DrawRect(tx+tw/2, ty+th/2, tw-4, th-4, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255) 
-                    end
+                    Menu.DrawRect(tx, ty, tw, th, 100,100,100, 150)
+                    if item.value then Menu.DrawRect(tx+2, ty+2, tw-4, th-4, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255) end
                 elseif item.type == "slider" then
                     local sw, sh = 80, 8
                     local sx = x + w - sw - 10
                     local sy = y + sp.itemHeight/2 - sh/2
-                    Menu.DrawRect(sx+sw/2, sy+sh/2, sw, sh, 80,80,80, 255)
+                    Menu.DrawRect(sx, sy, sw, sh, 80,80,80, 255)
                     local percent = (item.value - item.min) / (item.max - item.min)
-                    Menu.DrawRect(sx+sw/2, sy+sh/2, sw * percent, sh, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255)
+                    Menu.DrawRect(sx, sy, sw * percent, sh, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255)
                     Menu.DrawText(sx+sw+5, sy+sh/2-4, string.format("%.1f", item.value), 12, 200,200,200,255)
                 end
             end
         end
     else
-        -- Menú principal de categorías
         local x, startY = sp.x, sp.y + sp.headerHeight
-        local w, itemH = sp.width-1, sp.itemHeight
+        local w, itemH = sp.width, sp.itemHeight
         local categories = {}
         for i=2, #Menu.Categories do table.insert(categories, Menu.Categories[i]) end
         for i, cat in ipairs(categories) do
             local y = startY + (i-1)*itemH
             local isSel = (i+1 == Menu.CurrentCategory)
             if isSel then
-                -- Categoría seleccionada: fondo verde lima
-                Menu.DrawRect(x + w/2, y + itemH/2, w, itemH, 
-                    Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255)
+                Menu.DrawRect(x, y, w, itemH, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255)
             else
-                Menu.DrawRect(x + w/2, y + itemH/2, w, itemH, 30,30,30, 255)
+                Menu.DrawRect(x, y, w, itemH, 30,30,30, 255)
             end
             Menu.DrawText(x+10, y+itemH/2-8, cat.name, 16, 255,255,255,255)
             Menu.DrawText(x+w-30, y+itemH/2-8, ">", 16, 200,200,200,255)
@@ -758,8 +737,18 @@ function Menu.DrawCategories()
     end
 end
 
+function Menu.DrawFooter()
+    local sp = Menu.GetScaledPosition()
+    local totalH = sp.headerHeight + sp.mainMenuHeight + sp.mainMenuSpacing + (#Menu.Categories-1)*sp.itemHeight + sp.footerSpacing
+    local y = sp.y + totalH
+    Menu.DrawRect(sp.x, y, sp.width-1, sp.footerHeight, 0,0,0, 255)
+    Menu.DrawText(sp.x+10, y+sp.footerHeight/2-8, "SENTEXMODZ .gg/discord", 13, 150,150,150,255)
+    local pos = string.format("%d/%d", Menu.CurrentCategory-1, #Menu.Categories-1)
+    Menu.DrawText(sp.x+sp.width-50, y+sp.footerHeight/2-8, pos, 13, 150,150,150,255)
+end
+
 -- ============================================================
--- SELECTOR DE TECLA (mejorado visualmente)
+-- SELECTOR DE TECLA (igual que original)
 -- ============================================================
 local quickKeys = {
     { code = 0x60, name = "Numpad 0" },
@@ -774,8 +763,8 @@ function Menu.DrawKeySelector(alpha)
     local w, h = 500, 280
     local x, y = (sw-w)/2, (sh-h)/2
 
-    Menu.DrawRect(x+w/2, y+h/2, w, h, 0,0,0, 200*alpha)
-    Menu.DrawRect(x+w/2, y+h/2, w, 4, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255*alpha)
+    Menu.DrawRoundedRect(x, y, w, h, 0,0,0, 200*alpha, 16)
+    Menu.DrawRoundedRect(x, y, w, h, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255*alpha, 16)
     Menu.DrawText(x+w/2, y+35, "🔑 SELECCIONA TECLA DE APERTURA", 22, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255*alpha, true)
     Menu.DrawText(x+w/2, y+75, "Presiona cualquier tecla o elige una rápida:", 16, 220,220,220, 200*alpha, true)
 
@@ -785,13 +774,12 @@ function Menu.DrawKeySelector(alpha)
     for i, key in ipairs(quickKeys) do
         local btnX = startX + (i-1)*(btnW+10)
         local isHover = (i == selectedQuick)
-        local color = isHover and Menu.Colors.SelectedBg or { r = 40, g = 40, b = 40 }
-        Menu.DrawRect(btnX+btnW/2, y+110+btnH/2, btnW, btnH, color.r, color.g, color.b, 255*alpha)
+        Menu.DrawRoundedRect(btnX, y+110, btnW, btnH, isHover and Menu.Colors.SelectedBg.r or 40, isHover and Menu.Colors.SelectedBg.g or 40, isHover and Menu.Colors.SelectedBg.b or 40, 255*alpha, 8)
         Menu.DrawText(btnX+btnW/2, y+110+btnH/2-7, key.name, 16, 255,255,255, 255*alpha, true)
     end
 
     if Menu.SelectedKeyName then
-        Menu.DrawRect(x+w/2, y+170+25, 160, 50, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 200*alpha)
+        Menu.DrawRoundedRect(x+w/2-80, y+170, 160, 50, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 200*alpha, 10)
         Menu.DrawText(x+w/2, y+195, Menu.SelectedKeyName, 22, 0,0,0, 255*alpha, true)
         Menu.DrawText(x+w/2, y+240, "▶ Presiona ENTER para guardar", 14, 200,200,200, 180*alpha, true)
     else
@@ -801,7 +789,7 @@ function Menu.DrawKeySelector(alpha)
 end
 
 -- ============================================================
--- MANEJO DE TECLAS Y NOCLIP SIGILOSO
+-- MANEJO DE TECLAS Y NOCLIP SIGILOSO (igual original)
 -- ============================================================
 Menu.KeyStates = {}
 function Menu.IsKeyJustPressed(key)
