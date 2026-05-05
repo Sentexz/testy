@@ -1,45 +1,36 @@
 -- ============================================================
--- SENTEXMODZ LIBRARY v8.0 - DISEÑO RICOMENU (nativo, sin Susano)
--- Selector de tecla, banner, dibujo con funciones nativas
+-- SENTEXMODZ MENU - VERSIÓN AUTOCONTENIDA (sin RAW)
+-- Diseño RicoMenu, selector de tecla incluido
 -- ============================================================
 
 local Menu = {}
 Menu.Visible = false
 Menu.CurrentSubmenu = nil
 Menu.CurrentOption = 1
-Menu.OptionCount = 0
-Menu.SelectingKey = false
+Menu.SelectingKey = true
 Menu.SelectedKey = nil
 Menu.SelectedKeyName = nil
-Menu.LoadingComplete = true   -- ya no hay carga
-Menu.IsLoading = false
 
--- Configuración visual (en píxeles, asumiendo 1920x1080)
+-- Configuración visual
 Menu.Style = {
-    menuX = 50,
-    menuY = 100,
-    menuWidth = 360,
-    bannerHeight = 100,
-    titleHeight = 30,
-    buttonHeight = 34,
+    x = 50, y = 100, w = 360,
+    bannerH = 100,
+    titleH = 30,
+    buttonH = 34,
     maxOptions = 12,
-    titleFont = 4,
-    titleColor = { r = 240, g = 240, b = 240, a = 255 },
-    titleBgColor = { r = 61, g = 248, b = 249, a = 255 },
-    menuBgColor = { r = 38, g = 38, b = 38, a = 200 },
-    menuFocusBgColor = { r = 61, g = 248, b = 249, a = 255 },
-    textColor = { r = 255, g = 255, b = 255, a = 255 },
-    focusTextColor = { r = 0, g = 0, b = 0, a = 255 },
-    subTitleBgColor = { r = 38, g = 38, b = 38, a = 255 }
+    bgColor = {38,38,38,200},
+    focusBgColor = {61,248,249,255},
+    textColor = {255,255,255,255},
+    focusTextColor = {0,0,0,255},
+    titleBgColor = {61,248,249,255},
+    subTitleBgColor = {38,38,38,255}
 }
 
--- Teclas de navegación (códigos nativos de FiveM)
-Menu.Keys = {
-    up = 172, down = 173, left = 174, right = 175, select = 191, back = 202
-}
+-- Teclas de navegación (códigos FiveM nativos)
+local Keys = { up = 172, down = 173, left = 174, right = 175, select = 191, back = 202 }
 
--- Mapeo de teclas para el selector
-Menu.KeyNames = {
+-- Mapeo para selector de tecla
+local KeyNames = {
     [0x08] = "Backspace", [0x09] = "Tab", [0x0D] = "Enter", [0x10] = "Shift",
     [0x11] = "Ctrl", [0x12] = "Alt", [0x1B] = "ESC", [0x20] = "Space",
     [0x21] = "Page Up", [0x22] = "Page Down", [0x23] = "End", [0x24] = "Home",
@@ -59,9 +50,8 @@ Menu.KeyNames = {
     [0x6F] = "Divide", [0x70] = "F1", [0x71] = "F2", [0x72] = "F3", [0x73] = "F4",
     [0x74] = "F5", [0x75] = "F6", [0x76] = "F7", [0x77] = "F8",
     [0x78] = "F9", [0x79] = "F10", [0x7A] = "F11", [0x7B] = "F12",
-    [0xA0] = "Left Shift", [0xA1] = "Right Shift", [0x90] = "Num Lock", [0x91] = "Scroll Lock"
 }
-function Menu.GetKeyName(code) return Menu.KeyNames[code] or ("0x"..string.format("%02X", code)) end
+function GetKeyName(code) return KeyNames[code] or ("0x"..string.format("%02X", code)) end
 
 -- Estructura del menú principal
 Menu.Structure = {
@@ -79,7 +69,7 @@ Menu.Structure = {
     { name = "Exit Menu", action = "exit" }
 }
 
--- Submenús (vacíos inicialmente)
+-- Submenús (se rellenarán después)
 Menu.Submenus = {
     player = { title = "Online Options", items = {} },
     self = { title = "Self Options", items = {} },
@@ -94,190 +84,137 @@ Menu.Submenus = {
     lua = { title = "Lua Options", items = {} }
 }
 
--- ============================================================
--- FUNCIONES DE DIBUJO (nativas FiveM)
--- ============================================================
-function Menu.DrawRect(x, y, w, h, r, g, b, a)
+-- Funciones de dibujo
+function DrawRect(x,y,w,h,r,g,b,a)
     DrawRect(x + w/2, y + h/2, w, h, r, g, b, a)
 end
-
-function Menu.DrawText(x, y, text, font, scale, r, g, b, a, center)
+function DrawText(x,y,text,font,scale,r,g,b,a,center)
     SetTextFont(font)
     SetTextScale(scale, scale)
-    SetTextColour(r, g, b, a)
+    SetTextColour(r,g,b,a)
     SetTextCentre(center or false)
     BeginTextCommandDisplayText("STRING")
     AddTextComponentString(text)
-    EndTextCommandDisplayText(x, y)
+    EndTextCommandDisplayText(x,y)
 end
 
-function Menu.DrawHeader()
-    local x = Menu.Style.menuX
-    local y = Menu.Style.menuY
-    local w = Menu.Style.menuWidth
-    local h = Menu.Style.bannerHeight
-    Menu.DrawRect(x, y, w, h, Menu.Style.titleBgColor.r, Menu.Style.titleBgColor.g, Menu.Style.titleBgColor.b, 255)
-    Menu.DrawText(x + w/2, y + h/2 - 10, "SENTEXMODZ", Menu.Style.titleFont, 0.8, 255,255,255,255, true)
-end
-
-function Menu.DrawTitle()
-    local x = Menu.Style.menuX
-    local y = Menu.Style.menuY + Menu.Style.bannerHeight
-    local w = Menu.Style.menuWidth
-    local h = Menu.Style.titleHeight
-    local title = (Menu.CurrentSubmenu and Menu.Submenus[Menu.CurrentSubmenu].title) or "SENTEXMODZ"
-    Menu.DrawRect(x, y, w, h, Menu.Style.titleBgColor.r, Menu.Style.titleBgColor.g, Menu.Style.titleBgColor.b, 255)
-    Menu.DrawText(x + w/2, y + h/2 - 8, title, Menu.Style.titleFont, 0.5, Menu.Style.titleColor.r, Menu.Style.titleColor.g, Menu.Style.titleColor.b, 255, true)
-end
-
-function Menu.DrawSubTitle()
-    local x = Menu.Style.menuX
-    local y = Menu.Style.menuY + Menu.Style.bannerHeight + Menu.Style.titleHeight
-    local w = Menu.Style.menuWidth
-    local h = Menu.Style.buttonHeight
-    local subTitle = Menu.CurrentSubmenu and (string.upper(Menu.CurrentSubmenu) .. " OPTIONS") or "MAIN MENU"
-    Menu.DrawRect(x, y, w, h, Menu.Style.subTitleBgColor.r, Menu.Style.subTitleBgColor.g, Menu.Style.subTitleBgColor.b, 255)
-    Menu.DrawText(x + 10, y + h/2 - 8, subTitle, 0, 0.4, 255,255,255,255, false)
-    if Menu.OptionCount > Menu.Style.maxOptions then
-        local posText = tostring(Menu.CurrentOption) .. " / " .. tostring(Menu.OptionCount)
-        Menu.DrawText(x + w - 50, y + h/2 - 8, posText, 0, 0.4, 200,200,200,255, false)
-    end
-end
-
-function Menu.DrawButton(text, subText, isCurrent, index)
-    local x = Menu.Style.menuX
-    local y = Menu.Style.menuY + Menu.Style.bannerHeight + Menu.Style.titleHeight + Menu.Style.buttonHeight + (index-1) * Menu.Style.buttonHeight
-    local w = Menu.Style.menuWidth
-    local h = Menu.Style.buttonHeight
-    local bgColor, textColor
-    if isCurrent then
-        bgColor = Menu.Style.menuFocusBgColor
-        textColor = Menu.Style.focusTextColor
-    else
-        bgColor = Menu.Style.menuBgColor
-        textColor = Menu.Style.textColor
-    end
-    Menu.DrawRect(x, y, w, h, bgColor.r, bgColor.g, bgColor.b, bgColor.a)
-    Menu.DrawText(x + 10, y + h/2 - 8, text, 0, 0.4, textColor.r, textColor.g, textColor.b, 255, false)
-    if subText then
-        Menu.DrawText(x + w - 10, y + h/2 - 8, subText, 0, 0.35, textColor.r, textColor.g, textColor.b, 255, true)
-    end
-end
-
+-- Dibujar menú
 function Menu.Draw()
     if Menu.SelectingKey then
-        Menu.DrawKeySelector()
+        -- Selector de tecla
+        local sw, sh = GetActiveScreenResolution()
+        local w, h = 500, 280
+        local x, y = (sw-w)/2, (sh-h)/2
+        DrawRect(x, y, w, h, 0,0,0, 200)
+        DrawRect(x, y, w, 4, Menu.Style.focusBgColor[1], Menu.Style.focusBgColor[2], Menu.Style.focusBgColor[3], 255)
+        DrawText(x+w/2, y+35, "🔑 SELECCIONA TECLA DE APERTURA", 4, 0.5, Menu.Style.focusBgColor[1], Menu.Style.focusBgColor[2], Menu.Style.focusBgColor[3], 255, true)
+        DrawText(x+w/2, y+75, "Presiona cualquier tecla o elige una rápida:", 0, 0.35, 220,220,220, 200, true)
+        local btnW, btnH = 100, 40
+        local startX = x + w/2 - (btnW*3)/2 - 10
+        local quickKeys = { {0x60,"Numpad 0"}, {0x79,"F10"}, {0x2D,"Insert"} }
+        for i, key in ipairs(quickKeys) do
+            local btnX = startX + (i-1)*(btnW+10)
+            local col = (i == selectedQuick) and {Menu.Style.focusBgColor[1], Menu.Style.focusBgColor[2], Menu.Style.focusBgColor[3]} or {40,40,40}
+            DrawRect(btnX, y+110, btnW, btnH, col[1], col[2], col[3], 255)
+            DrawText(btnX+btnW/2, y+110+btnH/2-7, key[2], 0, 0.35, 255,255,255,255, true)
+        end
+        if Menu.SelectedKeyName then
+            DrawRect(x+w/2-80, y+170, 160, 50, Menu.Style.focusBgColor[1], Menu.Style.focusBgColor[2], Menu.Style.focusBgColor[3], 200)
+            DrawText(x+w/2, y+195, Menu.SelectedKeyName, 0, 0.45, 0,0,0,255, true)
+            DrawText(x+w/2, y+240, "▶ Presiona ENTER para guardar", 0, 0.3, 200,200,200,180, true)
+        else
+            local pulse = 0.7 + math.sin(GetGameTimer()/200)*0.3
+            DrawText(x+w/2, y+200, "⌨️ Esperando tecla... ⌨️", 0, 0.35, 200*pulse,200*pulse,200*pulse, 200, true)
+        end
         return
     end
     if not Menu.Visible then return end
-    Menu.OptionCount = 0
+
     local items = Menu.CurrentSubmenu and Menu.Submenus[Menu.CurrentSubmenu].items or Menu.Structure
     if not items or #items == 0 then return end
-    local maxVisible = Menu.Style.maxOptions
-    local startIdx = math.max(1, Menu.CurrentOption - math.floor(maxVisible/2))
-    local endIdx = math.min(#items, startIdx + maxVisible - 1)
-    if endIdx - startIdx + 1 < maxVisible then
-        startIdx = math.max(1, endIdx - maxVisible + 1)
+    local totalOptions = #items
+    local startIdx = math.max(1, Menu.CurrentOption - math.floor(Menu.Style.maxOptions/2))
+    local endIdx = math.min(totalOptions, startIdx + Menu.Style.maxOptions - 1)
+    if endIdx - startIdx + 1 < Menu.Style.maxOptions then
+        startIdx = math.max(1, endIdx - Menu.Style.maxOptions + 1)
     end
-    Menu.OptionCount = #items
-    Menu.DrawHeader()
-    Menu.DrawTitle()
-    Menu.DrawSubTitle()
+
+    -- Banner
+    DrawRect(Menu.Style.x, Menu.Style.y, Menu.Style.w, Menu.Style.bannerH, Menu.Style.focusBgColor[1], Menu.Style.focusBgColor[2], Menu.Style.focusBgColor[3], 255)
+    DrawText(Menu.Style.x + Menu.Style.w/2, Menu.Style.y + Menu.Style.bannerH/2 - 10, "SENTEXMODZ", 4, 0.8, 255,255,255,255, true)
+
+    -- Título
+    local titleY = Menu.Style.y + Menu.Style.bannerH
+    local title = Menu.CurrentSubmenu and Menu.Submenus[Menu.CurrentSubmenu].title or "SENTEXMODZ"
+    DrawRect(Menu.Style.x, titleY, Menu.Style.w, Menu.Style.titleH, Menu.Style.focusBgColor[1], Menu.Style.focusBgColor[2], Menu.Style.focusBgColor[3], 255)
+    DrawText(Menu.Style.x + Menu.Style.w/2, titleY + Menu.Style.titleH/2 - 8, title, 4, 0.5, 240,240,240,255, true)
+
+    -- Subtítulo
+    local subY = titleY + Menu.Style.titleH
+    local subTitle = Menu.CurrentSubmenu and (string.upper(Menu.CurrentSubmenu) .. " OPTIONS") or "MAIN MENU"
+    DrawRect(Menu.Style.x, subY, Menu.Style.w, Menu.Style.buttonH, Menu.Style.subTitleBgColor[1], Menu.Style.subTitleBgColor[2], Menu.Style.subTitleBgColor[3], 255)
+    DrawText(Menu.Style.x + 10, subY + Menu.Style.buttonH/2 - 8, subTitle, 0, 0.4, 255,255,255,255, false)
+    if totalOptions > Menu.Style.maxOptions then
+        DrawText(Menu.Style.x + Menu.Style.w - 50, subY + Menu.Style.buttonH/2 - 8, Menu.CurrentOption.."/"..totalOptions, 0, 0.4, 200,200,200,255, false)
+    end
+
+    -- Opciones
     local visibleIndex = 1
     for i = startIdx, endIdx do
         local item = items[i]
         local isCurrent = (i == Menu.CurrentOption)
-        local subText = nil
+        local y = subY + Menu.Style.buttonH + (visibleIndex-1) * Menu.Style.buttonH
+        local bg = isCurrent and Menu.Style.focusBgColor or Menu.Style.bgColor
+        local txtCol = isCurrent and Menu.Style.focusTextColor or Menu.Style.textColor
+        DrawRect(Menu.Style.x, y, Menu.Style.w, Menu.Style.buttonH, bg[1], bg[2], bg[3], bg[4])
+        DrawText(Menu.Style.x + 10, y + Menu.Style.buttonH/2 - 8, item.name, 0, 0.4, txtCol[1], txtCol[2], txtCol[3], txtCol[4], false)
         if item.type == "toggle" then
-            subText = item.value and "~g~On" or "~r~Off"
+            local status = item.value and "~g~On" or "~r~Off"
+            DrawText(Menu.Style.x + Menu.Style.w - 10, y + Menu.Style.buttonH/2 - 8, status, 0, 0.35, txtCol[1], txtCol[2], txtCol[3], txtCol[4], true)
         elseif item.type == "slider" then
-            subText = tostring(item.value)
+            DrawText(Menu.Style.x + Menu.Style.w - 10, y + Menu.Style.buttonH/2 - 8, tostring(item.value), 0, 0.35, txtCol[1], txtCol[2], txtCol[3], txtCol[4], true)
         end
-        Menu.DrawButton(item.name, subText, isCurrent, visibleIndex)
         visibleIndex = visibleIndex + 1
     end
 end
 
--- ============================================================
--- SELECTOR DE TECLA
--- ============================================================
-local quickKeys = {
-    { code = 0x60, name = "Numpad 0" },
-    { code = 0x79, name = "F10" },
-    { code = 0x2D, name = "Insert" }
-}
-local selectedQuick = 1
-
-function Menu.DrawKeySelector()
-    local sw, sh = GetActiveScreenResolution()
-    local w, h = 500, 280
-    local x, y = (sw-w)/2, (sh-h)/2
-    Menu.DrawRect(x, y, w, h, 0,0,0, 200)
-    Menu.DrawRect(x, y, w, 4, Menu.Style.titleBgColor.r, Menu.Style.titleBgColor.g, Menu.Style.titleBgColor.b, 255)
-    Menu.DrawText(x+w/2, y+35, "🔑 SELECCIONA TECLA DE APERTURA", Menu.Style.titleFont, 0.5, Menu.Style.titleBgColor.r, Menu.Style.titleBgColor.g, Menu.Style.titleBgColor.b, 255, true)
-    Menu.DrawText(x+w/2, y+75, "Presiona cualquier tecla o elige una rápida:", 0, 0.35, 220,220,220, 200, true)
-    local btnW = 100
-    local btnH = 40
-    local startX = x + w/2 - (btnW * 3)/2 - 10
-    for i, key in ipairs(quickKeys) do
-        local btnX = startX + (i-1)*(btnW+10)
-        local isHover = (i == selectedQuick)
-        local col = isHover and { Menu.Style.titleBgColor.r, Menu.Style.titleBgColor.g, Menu.Style.titleBgColor.b } or {40,40,40}
-        Menu.DrawRect(btnX, y+110, btnW, btnH, col[1], col[2], col[3], 255)
-        Menu.DrawText(btnX+btnW/2, y+110+btnH/2-7, key.name, 0, 0.35, 255,255,255, 255, true)
-    end
-    if Menu.SelectedKeyName then
-        Menu.DrawRect(x+w/2-80, y+170, 160, 50, Menu.Style.titleBgColor.r, Menu.Style.titleBgColor.g, Menu.Style.titleBgColor.b, 200)
-        Menu.DrawText(x+w/2, y+195, Menu.SelectedKeyName, 0, 0.45, 0,0,0, 255, true)
-        Menu.DrawText(x+w/2, y+240, "▶ Presiona ENTER para guardar", 0, 0.3, 200,200,200, 180, true)
-    else
-        local pulse = 0.7 + math.sin(GetGameTimer()/200)*0.3
-        Menu.DrawText(x+w/2, y+200, "⌨️ Esperando tecla... ⌨️", 0, 0.35, 200*pulse,200*pulse,200*pulse, 200, true)
-    end
+-- Detección de teclas
+local keyStates = {}
+function IsKeyJustPressed(key)
+    local down = IsControlJustPressed(1, key)
+    local was = keyStates[key] or false
+    keyStates[key] = down
+    return down and not was
 end
 
--- ============================================================
--- MANEJO DE TECLAS (usando IsControlJustPressed)
--- ============================================================
-Menu.KeyStates = {}
-function Menu.IsKeyJustPressed(key)
-    return IsControlJustPressed(1, key)
-end
-
+-- Manejador de input
 function Menu.HandleInput(actionHandler)
     if Menu.SelectingKey then
-        if Menu.IsKeyJustPressed(0x25) then selectedQuick = math.max(1, selectedQuick - 1)
-        elseif Menu.IsKeyJustPressed(0x27) then selectedQuick = math.min(#quickKeys, selectedQuick + 1)
-        elseif Menu.IsKeyJustPressed(0x0D) then
+        if IsKeyJustPressed(0x25) then selectedQuick = math.max(1, (selectedQuick or 1) - 1)
+        elseif IsKeyJustPressed(0x27) then selectedQuick = math.min(3, (selectedQuick or 1) + 1)
+        elseif IsKeyJustPressed(0x0D) then
             if Menu.SelectedKey then
                 Menu.SelectingKey = false
                 Menu.Visible = false
-                if Susano and Susano.ShowNotification then
-                    Susano.ShowNotification("~g~Tecla guardada: "..Menu.SelectedKeyName, 2000)
-                else
-                    print("Tecla guardada: "..Menu.SelectedKeyName)
-                end
+                print("Tecla guardada: "..Menu.SelectedKeyName)
             else
-                local key = quickKeys[selectedQuick]
-                Menu.SelectedKey = key.code
-                Menu.SelectedKeyName = key.name
+                local quickKeys = { {0x60,"Numpad 0"}, {0x79,"F10"}, {0x2D,"Insert"} }
+                local key = quickKeys[selectedQuick or 1]
+                Menu.SelectedKey = key[1]
+                Menu.SelectedKeyName = key[2]
                 Menu.SelectingKey = false
                 Menu.Visible = false
-                if Susano and Susano.ShowNotification then
-                    Susano.ShowNotification("~g~Tecla rápida guardada: "..key.name, 2000)
-                else
-                    print("Tecla guardada: "..key.name)
-                end
+                print("Tecla rápida guardada: "..key[2])
             end
             return
         end
-        local forbidden = {0x0D, 0x25, 0x27, 0x26, 0x28}
-        for k, _ in pairs(Menu.KeyNames) do
+        local forbidden = {0x0D,0x25,0x27,0x26,0x28}
+        for k, _ in pairs(KeyNames) do
             local isForbidden = false
-            for _, f in ipairs(forbidden) do if k == f then isForbidden = true break end end
-            if not isForbidden and Menu.IsKeyJustPressed(k) then
+            for _, f in ipairs(forbidden) do if k == f then isForbidden = true end end
+            if not isForbidden and IsKeyJustPressed(k) then
                 Menu.SelectedKey = k
-                Menu.SelectedKeyName = Menu.GetKeyName(k)
+                Menu.SelectedKeyName = GetKeyName(k)
                 break
             end
         end
@@ -285,7 +222,7 @@ function Menu.HandleInput(actionHandler)
     end
 
     if not Menu.Visible then
-        if Menu.SelectedKey and Menu.IsKeyJustPressed(Menu.SelectedKey) then
+        if Menu.SelectedKey and IsKeyJustPressed(Menu.SelectedKey) then
             Menu.Visible = true
             Menu.CurrentSubmenu = nil
             Menu.CurrentOption = 1
@@ -293,7 +230,7 @@ function Menu.HandleInput(actionHandler)
         return
     end
 
-    if Menu.SelectedKey and Menu.IsKeyJustPressed(Menu.SelectedKey) then
+    if Menu.SelectedKey and IsKeyJustPressed(Menu.SelectedKey) then
         Menu.Visible = false
         return
     end
@@ -301,11 +238,11 @@ function Menu.HandleInput(actionHandler)
     local items = Menu.CurrentSubmenu and Menu.Submenus[Menu.CurrentSubmenu].items or Menu.Structure
     if not items or #items == 0 then return end
 
-    if Menu.IsKeyJustPressed(Menu.Keys.down) then
+    if IsKeyJustPressed(Keys.down) then
         Menu.CurrentOption = (Menu.CurrentOption % #items) + 1
-    elseif Menu.IsKeyJustPressed(Menu.Keys.up) then
+    elseif IsKeyJustPressed(Keys.up) then
         Menu.CurrentOption = ((Menu.CurrentOption - 2 + #items) % #items) + 1
-    elseif Menu.IsKeyJustPressed(Menu.Keys.select) then
+    elseif IsKeyJustPressed(Keys.select) then
         local item = items[Menu.CurrentOption]
         if item then
             if item.submenu then
@@ -314,28 +251,26 @@ function Menu.HandleInput(actionHandler)
             elseif item.type == "toggle" then
                 item.value = not item.value
                 if actionHandler then actionHandler(item.actionKey, item.value) end
-            elseif item.type == "slider" then
-                -- handled by left/right
             elseif item.type == "action" then
                 if actionHandler then actionHandler(item.actionKey) end
             elseif item.action == "exit" then
                 Menu.Visible = false
             end
         end
-    elseif Menu.IsKeyJustPressed(Menu.Keys.back) then
+    elseif IsKeyJustPressed(Keys.back) then
         if Menu.CurrentSubmenu then
             Menu.CurrentSubmenu = nil
             Menu.CurrentOption = 1
         else
             Menu.Visible = false
         end
-    elseif Menu.IsKeyJustPressed(Menu.Keys.left) then
+    elseif IsKeyJustPressed(Keys.left) then
         local item = items[Menu.CurrentOption]
         if item and item.type == "slider" then
             item.value = math.max(item.min, item.value - (item.step or 1))
             if actionHandler then actionHandler(item.actionKey, item.value) end
         end
-    elseif Menu.IsKeyJustPressed(Menu.Keys.right) then
+    elseif IsKeyJustPressed(Keys.right) then
         local item = items[Menu.CurrentOption]
         if item and item.type == "slider" then
             item.value = math.min(item.max, item.value + (item.step or 1))
@@ -344,24 +279,31 @@ function Menu.HandleInput(actionHandler)
     end
 end
 
--- ============================================================
--- BUCLE PRINCIPAL
--- ============================================================
-function Menu.Render()
-    Menu.Draw()
-end
+-- Bucle principal
+Citizen.CreateThread(function()
+    while true do
+        Menu.Draw()
+        Citizen.Wait(0)
+    end
+end)
 
-function Menu.Start(actionHandler)
-    -- Mostrar selector de tecla inmediatamente
+-- Iniciar el selector de tecla
+local function StartMenu(actionHandler)
     Menu.SelectingKey = true
-    -- Bucle principal
-    Citizen.CreateThread(function()
-        while true do
-            Menu.Render()
-            Menu.HandleInput(actionHandler)
-            Citizen.Wait(0)
-        end
-    end)
+    selectedQuick = 1
+    while true do
+        Menu.HandleInput(actionHandler)
+        Citizen.Wait(0)
+    end
 end
 
-return Menu
+-- ============================================================
+-- EJEMPLO DE ACCIONES (puedes agregar las que quieras)
+-- ============================================================
+local function ActionHandler(_, _)
+    -- Aquí irán tus funciones reales (godmode, noclip, etc.)
+    -- Por ahora vacío para probar el menú
+end
+
+StartMenu(ActionHandler)
+print("Menú listo. Selecciona una tecla.")
