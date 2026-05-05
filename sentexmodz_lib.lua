@@ -1,6 +1,6 @@
 -- ============================================================
--- SENTEXMODZ LIBRARY v6.1 - DISEÑO RICOMENU (infamous theme)
--- Con selector de tecla, banner, dibujo estable con Susano
+-- SENTEXMODZ LIBRARY v6.2 - DISEÑO RICOMENU (corregido)
+-- Con selector de tecla, banner y dibujo estable
 -- ============================================================
 
 local Menu = {}
@@ -17,39 +17,36 @@ Menu.LoadingProgress = 0
 Menu.LoadingStartTime = nil
 Menu.LoadingDuration = 3000
 
--- Banner (igual que el original)
+-- Banner
 Menu.Banner = {
     enabled = true,
-    imageUrl = "https://i.imgur.com/JV6Drrz.png",  -- cámbialo si quieres
+    imageUrl = "https://i.imgur.com/JV6Drrz.png",
     height = 100
 }
 Menu.bannerTexture = nil
 
--- Configuración visual (basada en el tema "infamous" de RicoMenu)
+-- Configuración visual (basada en tema "infamous" de RicoMenu)
 Menu.Style = {
-    menuX = 0.725,          -- posición X (0.0 - 1.0)
-    menuY = 0.1,            -- posición Y
+    menuX = 0.025,          -- posición X (esquina izquierda)
+    menuY = 0.025,          -- posición Y (esquina superior)
     menuWidth = 0.23,       -- ancho
     maxOptions = 13,        -- máx. opciones visibles
     titleHeight = 0.15,     -- altura del título
     titleXOffset = 0.5,     -- centrado
     titleYOffset = 0.05,
-    titleSpacing = 2,
     buttonHeight = 0.045,
     buttonScale = 0.380,
     buttonTextXOffset = 0.010,
     buttonTextYOffset = 0.010,
     titleFont = 4,
     titleColor = { r = 240, g = 240, b = 240, a = 255 },
-    titleBackgroundColor = { r = 61, g = 248, b = 249, a = 255 },  -- cyan
-    menuBackgroundColor = { r = 38, g = 38, b = 38, a = 80 },      -- semi-transparente
-    menuFocusBackgroundColor = { r = 61, g = 248, b = 249, a = 255 }, -- cyan
+    titleBackgroundColor = { r = 61, g = 248, b = 249, a = 255 },
+    menuBackgroundColor = { r = 38, g = 38, b = 38, a = 180 },  -- más opaco
+    menuFocusBackgroundColor = { r = 61, g = 248, b = 249, a = 255 },
     menuTextColor = { r = 255, g = 255, b = 255, a = 255 },
     menuSubTextColor = { r = 240, g = 240, b = 240, a = 255 },
     menuFocusTextColor = { r = 0, g = 0, b = 0, a = 255 },
     subTitleBackgroundColor = { r = 38, g = 38, b = 38, a = 255 },
-    arrowSymbol = ">>",
-    arrowColor = "~b~"
 }
 
 -- Teclas de navegación
@@ -57,7 +54,7 @@ Menu.Keys = {
     up = 172, down = 173, left = 174, right = 175, select = 191, back = 202
 }
 
--- Mapeo de teclas para el selector (teclas comunes)
+-- Mapeo de teclas
 Menu.KeyNames = {
     [0x08] = "Backspace", [0x09] = "Tab", [0x0D] = "Enter", [0x10] = "Shift",
     [0x11] = "Ctrl", [0x12] = "Alt", [0x1B] = "ESC", [0x20] = "Space",
@@ -82,7 +79,7 @@ Menu.KeyNames = {
 }
 function Menu.GetKeyName(code) return Menu.KeyNames[code] or ("0x"..string.format("%02X", code)) end
 
--- Estructura del menú principal (categorías vacías)
+-- Estructura del menú principal (categorías)
 Menu.Structure = {
     { name = "Online Options", submenu = "player" },
     { name = "Self Options", submenu = "self" },
@@ -98,7 +95,7 @@ Menu.Structure = {
     { name = "Exit Menu", action = "exit" }
 }
 
--- Submenús (todos vacíos inicialmente, los llenará el executor)
+-- Submenús (vacíos, se llenan desde el executor)
 Menu.Submenus = {
     player = { title = "Online Options", items = {} },
     self = { title = "Self Options", items = {} },
@@ -114,35 +111,27 @@ Menu.Submenus = {
 }
 
 -- ============================================================
--- FUNCIONES DE DIBUJO (usando Susano, con fallback a nativo)
+-- FUNCIONES DE DIBUJO (usando DrawRect nativo para fiabilidad)
 -- ============================================================
 function Menu.DrawRect(x, y, w, h, r, g, b, a)
-    if Susano and Susano.DrawFilledRect then
-        Susano.DrawFilledRect(x, y, w, h, r/255, g/255, b/255, a/255)
-    else
-        DrawRect(x + w/2, y + h/2, w, h, r, g, b, a)
-    end
+    DrawRect(x + w/2, y + h/2, w, h, r, g, b, a)
 end
 
 function Menu.DrawText(x, y, text, font, scale, r, g, b, a, center, rightJustify)
-    if Susano and Susano.DrawText then
-        Susano.DrawText(x, y, text, scale*50, r/255, g/255, b/255, a/255)
-    else
-        SetTextFont(font)
-        SetTextScale(scale, scale)
-        SetTextColour(r, g, b, a)
-        SetTextCentre(center or false)
-        if rightJustify then
-            SetTextWrap(x - 0.01, x + Menu.Style.menuWidth)
-            SetTextRightJustify(true)
-        end
-        BeginTextCommandDisplayText("STRING")
-        AddTextComponentString(text)
-        EndTextCommandDisplayText(x, y)
+    SetTextFont(font)
+    SetTextScale(scale, scale)
+    SetTextColour(r, g, b, a)
+    SetTextCentre(center or false)
+    if rightJustify then
+        SetTextWrap(x - 0.01, x + Menu.Style.menuWidth)
+        SetTextRightJustify(true)
     end
+    BeginTextCommandDisplayText("STRING")
+    AddTextComponentString(text)
+    EndTextCommandDisplayText(x, y)
 end
 
--- Cargar banner (igual que original)
+-- Cargar banner
 function Menu.LoadBannerTexture(url)
     if not url or not Susano or not Susano.HttpGet or not Susano.LoadTextureFromBuffer then return end
     CreateThread(function()
@@ -158,19 +147,20 @@ function Menu.DrawHeader()
     local x = Menu.Style.menuX
     local y = Menu.Style.menuY
     local w = Menu.Style.menuWidth
-    local h = Menu.Banner.height * (Menu.Style.buttonScale / 0.38)  -- escala relativa
+    local h = Menu.Banner.height / 1080.0  -- convertir a coordenadas relativas (1080p)
     if Menu.Banner.enabled and Menu.bannerTexture and Susano.DrawImage then
         Susano.DrawImage(Menu.bannerTexture, x, y, w, h, 1,1,1,1,0)
     else
         Menu.DrawRect(x, y, w, h, Menu.Style.titleBackgroundColor.r, Menu.Style.titleBackgroundColor.g, Menu.Style.titleBackgroundColor.b, 255)
-        Menu.DrawText(x + w/2, y + h/2 - 10, "SENTEXMODZ", Menu.Style.titleFont, Menu.Style.buttonScale, 255,255,255,255, true)
+        Menu.DrawText(x + w/2, y + h/2 - 0.02, "SENTEXMODZ", Menu.Style.titleFont, Menu.Style.buttonScale, 255,255,255,255, true)
     end
 end
 
 function Menu.DrawTitle()
     local x = Menu.Style.menuX + Menu.Style.menuWidth / 2
     local xText = Menu.Style.menuX + Menu.Style.menuWidth * Menu.Style.titleXOffset
-    local y = Menu.Style.menuY + Menu.Banner.height * (Menu.Style.buttonScale / 0.38) + Menu.Style.titleHeight / 2
+    local headerH = Menu.Banner.height / 1080.0
+    local y = Menu.Style.menuY + headerH + Menu.Style.titleHeight / 2
     local title = (Menu.CurrentSubmenu and Menu.Submenus[Menu.CurrentSubmenu].title) or "SENTEXMODZ"
     Menu.DrawRect(Menu.Style.menuX, y - Menu.Style.titleHeight/2, Menu.Style.menuWidth, Menu.Style.titleHeight,
         Menu.Style.titleBackgroundColor.r, Menu.Style.titleBackgroundColor.g, Menu.Style.titleBackgroundColor.b, Menu.Style.titleBackgroundColor.a)
@@ -180,7 +170,8 @@ end
 
 function Menu.DrawSubTitle()
     local x = Menu.Style.menuX + Menu.Style.menuWidth / 2
-    local y = Menu.Style.menuY + Menu.Banner.height * (Menu.Style.buttonScale / 0.38) + Menu.Style.titleHeight + Menu.Style.buttonHeight / 2
+    local headerH = Menu.Banner.height / 1080.0
+    local y = Menu.Style.menuY + headerH + Menu.Style.titleHeight + Menu.Style.buttonHeight / 2
     local subTitle = Menu.CurrentSubmenu and (Menu.CurrentSubmenu:upper() .. " OPTIONS") or "MAIN MENU"
     Menu.DrawRect(x, y, Menu.Style.menuWidth, Menu.Style.buttonHeight,
         Menu.Style.subTitleBackgroundColor.r, Menu.Style.subTitleBackgroundColor.g, Menu.Style.subTitleBackgroundColor.b, Menu.Style.subTitleBackgroundColor.a)
@@ -202,7 +193,8 @@ function Menu.DrawButton(text, subText, isCurrent)
         multiplier = Menu.OptionCount - (Menu.CurrentOption - Menu.Style.maxOptions)
     end
     if multiplier then
-        local y = Menu.Style.menuY + Menu.Banner.height * (Menu.Style.buttonScale / 0.38) + Menu.Style.titleHeight + Menu.Style.buttonHeight + (Menu.Style.buttonHeight * multiplier) - Menu.Style.buttonHeight/2
+        local headerH = Menu.Banner.height / 1080.0
+        local y = Menu.Style.menuY + headerH + Menu.Style.titleHeight + Menu.Style.buttonHeight + (Menu.Style.buttonHeight * multiplier) - Menu.Style.buttonHeight/2
         local bgColor, textColor, subTextColor
         if isCurrent then
             bgColor = Menu.Style.menuFocusBackgroundColor
@@ -229,10 +221,9 @@ function Menu.Draw()
         return
     end
     if not Menu.Visible then return end
-    -- Reiniciar contador de opciones
     Menu.OptionCount = 0
     local items = Menu.CurrentSubmenu and Menu.Submenus[Menu.CurrentSubmenu].items or Menu.Structure
-    if not items then return end
+    if not items or #items == 0 then return end
     local startIdx = math.max(1, Menu.CurrentOption - Menu.Style.maxOptions)
     local endIdx = math.min(#items, startIdx + Menu.Style.maxOptions - 1)
     Menu.OptionCount = #items
@@ -247,15 +238,13 @@ function Menu.Draw()
             subText = item.value and "~g~On" or "~r~Off"
         elseif item.type == "slider" then
             subText = tostring(item.value)
-        elseif item.type == "action" and item.subText then
-            subText = item.subText
         end
         Menu.DrawButton(item.name, subText, isCurrent)
     end
 end
 
 -- ============================================================
--- SELECTOR DE TECLA (diseño adaptado)
+-- SELECTOR DE TECLA
 -- ============================================================
 local quickKeys = {
     { code = 0x60, name = "Numpad 0" },
@@ -265,41 +254,39 @@ local quickKeys = {
 local selectedQuick = 1
 
 function Menu.DrawKeySelector()
-    if not Susano or not Susano.BeginFrame then return end
     local sw, sh = GetActiveScreenResolution()
-    local w, h = 500, 280
-    local x, y = (sw-w)/2, (sh-h)/2
+    local w, h = 500/sw, 280/sh  -- coordenadas relativas
+    local x, y = (1-w)/2, (1-h)/2
     Menu.DrawRect(x, y, w, h, 0,0,0, 200)
-    Menu.DrawRect(x, y, w, 4, Menu.Style.titleBackgroundColor.r, Menu.Style.titleBackgroundColor.g, Menu.Style.titleBackgroundColor.b, 255)
-    Menu.DrawText(x+w/2, y+35, "🔑 SELECCIONA TECLA DE APERTURA", Menu.Style.titleFont, 0.5, Menu.Style.titleBackgroundColor.r, Menu.Style.titleBackgroundColor.g, Menu.Style.titleBackgroundColor.b, 255, true)
-    Menu.DrawText(x+w/2, y+75, "Presiona cualquier tecla o elige una rápida:", 0, 0.35, 220,220,220, 200, true)
-    local btnW = 100
-    local btnH = 40
-    local startX = x + w/2 - (btnW * 3)/2 - 10
+    Menu.DrawRect(x, y, w, 0.01, Menu.Style.titleBackgroundColor.r, Menu.Style.titleBackgroundColor.g, Menu.Style.titleBackgroundColor.b, 255)
+    Menu.DrawText(x+w/2, y+0.05, "🔑 SELECCIONA TECLA DE APERTURA", Menu.Style.titleFont, 0.5, Menu.Style.titleBackgroundColor.r, Menu.Style.titleBackgroundColor.g, Menu.Style.titleBackgroundColor.b, 255, true)
+    Menu.DrawText(x+w/2, y+0.1, "Presiona cualquier tecla o elige una rápida:", 0, 0.35, 220,220,220, 200, true)
+    local btnW = 0.12
+    local btnH = 0.05
+    local startX = x + w/2 - (btnW * 3)/2 - 0.01
     for i, key in ipairs(quickKeys) do
-        local btnX = startX + (i-1)*(btnW+10)
+        local btnX = startX + (i-1)*(btnW+0.01)
         local isHover = (i == selectedQuick)
         local col = isHover and { Menu.Style.titleBackgroundColor.r, Menu.Style.titleBackgroundColor.g, Menu.Style.titleBackgroundColor.b } or {40,40,40}
-        Menu.DrawRect(btnX, y+110, btnW, btnH, col[1], col[2], col[3], 255)
-        Menu.DrawText(btnX+btnW/2, y+110+btnH/2-7, key.name, 0, 0.35, 255,255,255, 255, true)
+        Menu.DrawRect(btnX, y+0.15, btnW, btnH, col[1], col[2], col[3], 255)
+        Menu.DrawText(btnX+btnW/2, y+0.15+btnH/2-0.01, key.name, 0, 0.35, 255,255,255, 255, true)
     end
     if Menu.SelectedKeyName then
-        Menu.DrawRect(x+w/2-80, y+170, 160, 50, Menu.Style.titleBackgroundColor.r, Menu.Style.titleBackgroundColor.g, Menu.Style.titleBackgroundColor.b, 200)
-        Menu.DrawText(x+w/2, y+195, Menu.SelectedKeyName, 0, 0.45, 0,0,0, 255, true)
-        Menu.DrawText(x+w/2, y+240, "▶ Presiona ENTER para guardar", 0, 0.3, 200,200,200, 180, true)
+        Menu.DrawRect(x+w/2-0.1, y+0.22, 0.2, 0.06, Menu.Style.titleBackgroundColor.r, Menu.Style.titleBackgroundColor.g, Menu.Style.titleBackgroundColor.b, 200)
+        Menu.DrawText(x+w/2, y+0.25, Menu.SelectedKeyName, 0, 0.45, 0,0,0, 255, true)
+        Menu.DrawText(x+w/2, y+0.3, "▶ Presiona ENTER para guardar", 0, 0.3, 200,200,200, 180, true)
     else
         local pulse = 0.7 + math.sin(GetGameTimer()/200)*0.3
-        Menu.DrawText(x+w/2, y+200, "⌨️ Esperando tecla... ⌨️", 0, 0.35, 200*pulse,200*pulse,200*pulse, 200, true)
+        Menu.DrawText(x+w/2, y+0.27, "⌨️ Esperando tecla... ⌨️", 0, 0.35, 200*pulse,200*pulse,200*pulse, 200, true)
     end
 end
 
 -- ============================================================
--- MANEJO DE TECLAS (navegación y selector)
+-- MANEJO DE TECLAS
 -- ============================================================
 Menu.KeyStates = {}
 function Menu.IsKeyJustPressed(key)
     if not Susano or not Susano.GetAsyncKeyState then
-        -- Fallback nativo (menos preciso)
         return IsControlJustPressed(1, key)
     end
     local down, pressed = Susano.GetAsyncKeyState(key)
@@ -359,7 +346,7 @@ function Menu.HandleInput(actionHandler)
     end
 
     local items = Menu.CurrentSubmenu and Menu.Submenus[Menu.CurrentSubmenu].items or Menu.Structure
-    if not items then return end
+    if not items or #items == 0 then return end
 
     if Menu.IsKeyJustPressed(Menu.Keys.down) then
         Menu.CurrentOption = (Menu.CurrentOption % #items) + 1
@@ -405,7 +392,7 @@ function Menu.HandleInput(actionHandler)
 end
 
 -- ============================================================
--- CICLO PRINCIPAL DE RENDER (usando Susano para evitar parpadeo)
+-- RENDER Y CICLO PRINCIPAL
 -- ============================================================
 function Menu.Render()
     if not Susano or not Susano.BeginFrame then return end
@@ -415,12 +402,10 @@ function Menu.Render()
 end
 
 function Menu.Start(actionHandler)
-    -- Cargar banner
     if Menu.Banner.enabled and Menu.Banner.imageUrl then
         Menu.LoadBannerTexture(Menu.Banner.imageUrl)
     end
 
-    -- Timer de carga
     CreateThread(function()
         Menu.LoadingStartTime = GetGameTimer()
         while Menu.IsLoading do
@@ -436,7 +421,6 @@ function Menu.Start(actionHandler)
         end
     end)
 
-    -- Bucle principal
     CreateThread(function()
         while true do
             Menu.Render()
